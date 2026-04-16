@@ -56,7 +56,7 @@ export async function clearSession() {
   cookieStore.delete(SESSION_COOKIE);
 }
 
-export async function getCurrentSession() {
+export async function getCurrentSession(options?: { touch?: boolean }) {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) {
@@ -88,10 +88,12 @@ export async function getCurrentSession() {
     return null;
   }
 
-  await prisma.authSession.update({
-    where: { id: session.id },
-    data: { lastSeenAt: new Date() },
-  });
+  if (options?.touch !== false) {
+    await prisma.authSession.update({
+      where: { id: session.id },
+      data: { lastSeenAt: new Date() },
+    });
+  }
 
   return session;
 }

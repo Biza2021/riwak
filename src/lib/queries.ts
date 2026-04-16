@@ -256,13 +256,34 @@ export async function getCustomerRewardsData(customerId: string) {
   return customer;
 }
 
-export async function getStaffQueueData(statusFilter?: string) {
+export async function getStaffQueueData(
+  statusFilter?: string,
+  options?: { showDemo?: boolean },
+) {
   await expireOverdueOrders();
   const settings = await ensureStoreSettings();
   const scopedToSingleStatus = Boolean(statusFilter && statusFilter !== "ALL");
+  const showDemo = options?.showDemo ?? false;
+  const baseWhere: Prisma.OrderWhereInput = showDemo
+    ? {}
+    : {
+        customer: {
+          isDemo: false,
+        },
+      };
+  const ordersWhere: Prisma.OrderWhereInput = scopedToSingleStatus
+    ? {
+        AND: [
+          baseWhere,
+          {
+            status: statusFilter as OrderStatus,
+          },
+        ],
+      }
+    : baseWhere;
 
   const orders = await prisma.order.findMany({
-    where: scopedToSingleStatus ? { status: statusFilter as OrderStatus } : undefined,
+    where: ordersWhere,
     orderBy: [{ placedAt: "desc" }, { createdAt: "desc" }],
     include: {
       customer: {
@@ -283,9 +304,14 @@ export async function getStaffQueueData(statusFilter?: string) {
 
   const allOrders = await prisma.order.findMany({
     where: {
-      status: {
-        in: activeStatuses as unknown as OrderStatus[],
-      },
+      AND: [
+        baseWhere,
+        {
+          status: {
+            in: activeStatuses as unknown as OrderStatus[],
+          },
+        },
+      ],
     },
     select: {
       status: true,
@@ -303,7 +329,10 @@ export async function getStaffQueueData(statusFilter?: string) {
     EXPIRED: 0,
   } as Record<string, number>;
 
-  for (const order of await prisma.order.findMany({ select: { status: true } })) {
+  for (const order of await prisma.order.findMany({
+    where: baseWhere,
+    select: { status: true },
+  })) {
     counts[order.status] = (counts[order.status] ?? 0) + 1;
   }
 

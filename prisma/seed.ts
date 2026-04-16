@@ -19,6 +19,7 @@ type CustomerSeed = {
   fullName: string;
   phoneNumber: string;
   loyaltyPin: string;
+  isDemo?: boolean;
   customerType: CustomerType;
   trustReason?: string | null;
   limitedUntil?: Date | null;
@@ -82,6 +83,7 @@ const customerSeeds: CustomerSeed[] = [
     fullName: "Amina El Fassi",
     phoneNumber: "+212600000001",
     loyaltyPin: "111111",
+    isDemo: true,
     customerType: "RETURNING",
     currentStampCount: 3,
     lifetimeStampCount: 3,
@@ -91,6 +93,7 @@ const customerSeeds: CustomerSeed[] = [
     fullName: "Youssef Benali",
     phoneNumber: "+212600000002",
     loyaltyPin: "222222",
+    isDemo: true,
     customerType: "TRUSTED",
     trustedUntil: null,
     trustReason: "Client régulier",
@@ -102,6 +105,7 @@ const customerSeeds: CustomerSeed[] = [
     fullName: "Salma Ait",
     phoneNumber: "+212600000003",
     loyaltyPin: "333333",
+    isDemo: true,
     customerType: "LIMITED",
     limitedUntil: new Date(Date.now() + 72 * 60 * 60 * 1000),
     trustReason: "Limitation temporaire",
@@ -113,6 +117,7 @@ const customerSeeds: CustomerSeed[] = [
     fullName: "Omar Berrada",
     phoneNumber: "+212600000004",
     loyaltyPin: "444444",
+    isDemo: true,
     customerType: "RETURNING",
     currentStampCount: 0,
     lifetimeStampCount: 5,
@@ -122,6 +127,7 @@ const customerSeeds: CustomerSeed[] = [
     fullName: "Kenza Amani",
     phoneNumber: "+212600000005",
     loyaltyPin: "555555",
+    isDemo: true,
     customerType: "RETURNING",
     currentStampCount: 2,
     lifetimeStampCount: 2,
@@ -131,6 +137,7 @@ const customerSeeds: CustomerSeed[] = [
     fullName: "Anas Idrissi",
     phoneNumber: "+212600000006",
     loyaltyPin: "666666",
+    isDemo: true,
     customerType: "RETURNING",
     currentStampCount: 1,
     lifetimeStampCount: 1,
@@ -283,6 +290,7 @@ async function main() {
             fullName: customerSeed.fullName,
             phoneNumber: customerSeed.phoneNumber,
             loyaltyPin: customerSeed.loyaltyPin,
+            isDemo: customerSeed.isDemo ?? false,
             customerType: customerSeed.customerType,
             trustReason: customerSeed.trustReason,
             limitedUntil: customerSeed.limitedUntil,

@@ -1,14 +1,37 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
-export function AutoRefresh({ intervalMs = 15000 }: { intervalMs?: number }) {
+type AutoRefreshMode = "router" | "reload";
+
+export function AutoRefresh({
+  intervalMs = 15000,
+  mode = "router",
+}: {
+  intervalMs?: number;
+  mode?: AutoRefreshMode;
+}) {
   const router = useRouter();
+  const lastRefreshAtRef = useRef(0);
 
   useEffect(() => {
+    lastRefreshAtRef.current = Date.now();
+
     const refreshNow = () => {
       if (document.visibilityState === "hidden") {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastRefreshAtRef.current < 1000) {
+        return;
+      }
+
+      lastRefreshAtRef.current = now;
+
+      if (mode === "reload") {
+        window.location.reload();
         return;
       }
 
@@ -19,15 +42,25 @@ export function AutoRefresh({ intervalMs = 15000 }: { intervalMs?: number }) {
       refreshNow();
     }, intervalMs);
 
-    window.addEventListener("focus", refreshNow);
-    document.addEventListener("visibilitychange", refreshNow);
+    const handleFocus = () => {
+      refreshNow();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshNow();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       window.clearInterval(timer);
-      window.removeEventListener("focus", refreshNow);
-      document.removeEventListener("visibilitychange", refreshNow);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [intervalMs, router]);
+  }, [intervalMs, mode, router]);
 
   return null;
 }

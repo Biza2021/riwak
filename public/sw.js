@@ -1,17 +1,33 @@
-const CACHE_NAME = "riwak-v1";
+const CACHE_NAME = "riwak-v2";
 const CORE_URLS = [
   "/",
   "/register",
-  "/app",
-  "/menu",
-  "/rewards",
-  "/account",
   "/staff/login",
   "/offline",
   "/manifest.webmanifest",
   "/icon",
   "/apple-icon",
 ];
+
+const DYNAMIC_BYPASS_PREFIXES = [
+  "/api/",
+  "/staff",
+  "/app",
+  "/account",
+  "/order",
+  "/orders",
+  "/reward",
+  "/rewards",
+  "/menu",
+];
+
+function matchesPrefix(pathname, prefix) {
+  if (prefix.endsWith("/")) {
+    return pathname.startsWith(prefix);
+  }
+
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -35,6 +51,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
+  const url = new URL(request.url);
 
   if (request.method !== "GET") {
     return;
@@ -47,6 +64,17 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Never serve authenticated, query-string, or explicitly no-store requests
+  // from the offline cache. These need fresh network data.
+  if (
+    url.origin !== self.location.origin ||
+    request.cache === "no-store" ||
+    url.search ||
+    DYNAMIC_BYPASS_PREFIXES.some((prefix) => matchesPrefix(url.pathname, prefix))
+  ) {
+    return;
+  }
+
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) {
@@ -55,10 +83,7 @@ self.addEventListener("fetch", (event) => {
 
       return fetch(request)
         .then((response) => {
-          if (
-            response.ok &&
-            new URL(request.url).origin === self.location.origin
-          ) {
+          if (response.ok) {
             const copy = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           }

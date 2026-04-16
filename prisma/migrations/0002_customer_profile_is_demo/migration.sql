@@ -1,0 +1,13 @@
+ALTER TABLE "CustomerProfile"
+ADD COLUMN "isDemo" BOOLEAN NOT NULL DEFAULT false;
+
+UPDATE "CustomerProfile"
+SET "isDemo" = true
+WHERE "phoneNumber" IN (
+  '+212600000001',
+  '+212600000002',
+  '+212600000003',
+  '+212600000004',
+  '+212600000005',
+  '+212600000006'
+);

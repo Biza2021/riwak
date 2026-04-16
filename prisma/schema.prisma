@@ -77,6 +77,7 @@ model CustomerProfile {
   fullName      String
   phoneNumber   String             @unique
   loyaltyPin    String             @unique
+  isDemo        Boolean            @default(false)
   customerType  CustomerType       @default(NEW)
   trustReason   String?
   limitedUntil  DateTime?
