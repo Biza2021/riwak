@@ -81,6 +81,38 @@ export function isActiveOrderStatus(status: OrderStatus) {
   return ["RECEIVED", "ACCEPTED", "PREPARING", "READY"].includes(status);
 }
 
+export function compareStaffQueueOrders<
+  T extends {
+    status: OrderStatus;
+    placedAt: Date;
+    createdAt?: Date | null;
+    id?: string | null;
+  },
+>(left: T, right: T) {
+  const leftActive = isActiveOrderStatus(left.status);
+  const rightActive = isActiveOrderStatus(right.status);
+
+  if (leftActive !== rightActive) {
+    return leftActive ? -1 : 1;
+  }
+
+  const placedAtDiff = right.placedAt.getTime() - left.placedAt.getTime();
+  if (placedAtDiff !== 0) {
+    return placedAtDiff;
+  }
+
+  const leftCreatedAt = left.createdAt?.getTime() ?? 0;
+  const rightCreatedAt = right.createdAt?.getTime() ?? 0;
+  const createdAtDiff = rightCreatedAt - leftCreatedAt;
+  if (createdAtDiff !== 0) {
+    return createdAtDiff;
+  }
+
+  const leftId = left.id ?? "";
+  const rightId = right.id ?? "";
+  return rightId.localeCompare(leftId);
+}
+
 export function computeOrderExpiresAt(
   placedAt: Date,
   unpaidOrderExpiryMinutes: number,

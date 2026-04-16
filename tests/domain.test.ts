@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyLoyaltyPurchase,
   canCreateOrder,
+  compareStaffQueueOrders,
   computeOrderExpiresAt,
   displayCustomerType,
   redeemRewardState,
@@ -38,6 +39,44 @@ describe("order rules", () => {
     });
 
     expect(result.allowed).toBe(true);
+  });
+
+  it("keeps active orders ahead of terminal orders in the staff queue", () => {
+    const orders = [
+      {
+        id: "cancelled",
+        status: "CANCELLED" as const,
+        placedAt: new Date("2026-04-16T10:10:00Z"),
+        createdAt: new Date("2026-04-16T10:10:00Z"),
+      },
+      {
+        id: "received",
+        status: "RECEIVED" as const,
+        placedAt: new Date("2026-04-16T10:00:00Z"),
+        createdAt: new Date("2026-04-16T10:00:00Z"),
+      },
+    ].sort(compareStaffQueueOrders);
+
+    expect(orders.map((order) => order.id)).toEqual(["received", "cancelled"]);
+  });
+
+  it("keeps the newest active order first within the staff queue", () => {
+    const orders = [
+      {
+        id: "older",
+        status: "RECEIVED" as const,
+        placedAt: new Date("2026-04-16T10:00:00Z"),
+        createdAt: new Date("2026-04-16T10:00:00Z"),
+      },
+      {
+        id: "newer",
+        status: "RECEIVED" as const,
+        placedAt: new Date("2026-04-16T10:05:00Z"),
+        createdAt: new Date("2026-04-16T10:05:00Z"),
+      },
+    ].sort(compareStaffQueueOrders);
+
+    expect(orders.map((order) => order.id)).toEqual(["newer", "older"]);
   });
 });
 

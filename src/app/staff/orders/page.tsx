@@ -67,7 +67,7 @@ export default async function StaffOrdersPage({
   return (
     <>
       <Screen className="pb-24">
-        <AutoRefresh intervalMs={8000} />
+        <AutoRefresh intervalMs={3000} />
         <div className="space-y-5">
           <SectionHeader
             eyebrow={fr.staff.queueTitle}

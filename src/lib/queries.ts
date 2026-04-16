@@ -1,7 +1,11 @@
 import { Prisma, type OrderStatus } from "@prisma/client";
 
 import { prisma } from "./db";
-import { displayCustomerType, isActiveOrderStatus } from "./domain";
+import {
+  compareStaffQueueOrders,
+  displayCustomerType,
+  isActiveOrderStatus,
+} from "./domain";
 import { formatCurrency } from "./format";
 
 const activeStatuses = ["RECEIVED", "ACCEPTED", "PREPARING", "READY"] as const;
@@ -255,13 +259,11 @@ export async function getCustomerRewardsData(customerId: string) {
 export async function getStaffQueueData(statusFilter?: string) {
   await expireOverdueOrders();
   const settings = await ensureStoreSettings();
+  const scopedToSingleStatus = Boolean(statusFilter && statusFilter !== "ALL");
 
   const orders = await prisma.order.findMany({
-    where:
-      statusFilter && statusFilter !== "ALL"
-        ? { status: statusFilter as OrderStatus }
-        : undefined,
-    orderBy: [{ placedAt: "desc" }],
+    where: scopedToSingleStatus ? { status: statusFilter as OrderStatus } : undefined,
+    orderBy: [{ placedAt: "desc" }, { createdAt: "desc" }],
     include: {
       customer: {
         include: {
@@ -275,6 +277,9 @@ export async function getStaffQueueData(statusFilter?: string) {
       },
     },
   });
+  const queueOrders = scopedToSingleStatus
+    ? orders
+    : [...orders].sort(compareStaffQueueOrders);
 
   const allOrders = await prisma.order.findMany({
     where: {
@@ -309,7 +314,7 @@ export async function getStaffQueueData(statusFilter?: string) {
 
   return {
     settings,
-    orders,
+    orders: queueOrders,
     counts,
     totalRevenue,
     activeOrders: allOrders.length,
