@@ -1,0 +1,247 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  STAFF
+  ADMIN
+}
+
+enum CustomerType {
+  NEW
+  RETURNING
+  TRUSTED
+  LIMITED
+}
+
+enum OrderStatus {
+  RECEIVED
+  ACCEPTED
+  PREPARING
+  READY
+  PICKED_UP
+  CANCELLED
+  EXPIRED
+}
+
+enum RewardType {
+  FREE_DRINK
+}
+
+enum RewardStatus {
+  AVAILABLE
+  REDEEMED
+  EXPIRED
+}
+
+enum LoyaltyEventType {
+  EARNED
+  REDEEMED
+  ADJUSTED
+}
+
+enum TrustEventType {
+  TRUSTED
+  LIMITED
+  UNLIMITED
+  NOTE
+}
+
+enum OrderRiskState {
+  NEW
+  RETURNING
+  TRUSTED
+  LIMITED
+}
+
+model User {
+  id              String           @id @default(cuid())
+  role            UserRole         @default(CUSTOMER)
+  customerProfile CustomerProfile?
+  staffUser       StaffUser?
+  sessions        AuthSession[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model CustomerProfile {
+  id            String             @id @default(cuid())
+  userId        String             @unique
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName      String
+  phoneNumber   String             @unique
+  loyaltyPin    String             @unique
+  customerType  CustomerType       @default(NEW)
+  trustReason   String?
+  limitedUntil  DateTime?
+  trustedUntil  DateTime?
+  lastOrderAt   DateTime?
+  favoriteOrderId String?
+  notes         String?
+  loyaltyAccount LoyaltyAccount?
+  orders        Order[]
+  loyaltyEvents LoyaltyStampEvent[]
+  rewards       Reward[]
+  trustEvents   CustomerTrustEvent[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
+
+model StaffUser {
+  id            String             @id @default(cuid())
+  userId        String             @unique
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName      String
+  email         String             @unique
+  passwordHash  String
+  active        Boolean            @default(true)
+  trustEvents   CustomerTrustEvent[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
+
+model AuthSession {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash   String     @unique
+  expiresAt   DateTime
+  lastSeenAt  DateTime   @default(now())
+  createdAt   DateTime   @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model MenuItem {
+  id            String       @id @default(cuid())
+  name          String
+  slug          String       @unique
+  description   String?
+  price         Decimal      @db.Decimal(10, 2)
+  isActive      Boolean      @default(true)
+  displayOrder  Int          @default(0)
+  isQualifying  Boolean      @default(true)
+  notesRequired Boolean      @default(false)
+  orderItems    OrderItem[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Order {
+  id                   String       @id @default(cuid())
+  customerId           String
+  customer             CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  status               OrderStatus   @default(RECEIVED)
+  pickupTime           DateTime
+  placedAt             DateTime      @default(now())
+  expiresAt            DateTime
+  totalAmount          Decimal       @db.Decimal(10, 2)
+  isPaidAtShop         Boolean       @default(true)
+  riskState            OrderRiskState @default(NEW)
+  itemCount            Int           @default(1)
+  loyaltyGrantedAt     DateTime?
+  customerNameSnapshot String
+  customerPhoneSnapshot String
+  customerTypeSnapshot CustomerType
+  notes                String?
+  orderItems           OrderItem[]
+  rewards              Reward[]
+  loyaltyEvents        LoyaltyStampEvent[]
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  @@index([customerId, status])
+  @@index([status, placedAt])
+}
+
+model OrderItem {
+  id          String    @id @default(cuid())
+  orderId     String
+  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId   String
+  menuItem    MenuItem  @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  quantity    Int       @default(1)
+  notes       String?
+  unitPrice   Decimal   @db.Decimal(10, 2)
+  createdAt   DateTime  @default(now())
+
+  @@index([orderId])
+  @@index([menuItemId])
+}
+
+model LoyaltyAccount {
+  id                  String             @id @default(cuid())
+  customerId          String             @unique
+  customer            CustomerProfile    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  currentStampCount   Int                @default(0)
+  lifetimeStampCount  Int                @default(0)
+  availableFreeDrinks Int                @default(0)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+}
+
+model LoyaltyStampEvent {
+  id          String            @id @default(cuid())
+  customerId  String
+  customer    CustomerProfile   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  orderId     String?
+  order       Order?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  type        LoyaltyEventType
+  stampDelta  Int
+  notes       String?
+  createdAt   DateTime          @default(now())
+
+  @@index([customerId])
+  @@index([orderId])
+}
+
+model Reward {
+  id           String        @id @default(cuid())
+  customerId   String
+  customer     CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  type         RewardType    @default(FREE_DRINK)
+  status       RewardStatus  @default(AVAILABLE)
+  expiresAt    DateTime?
+  redeemedAt   DateTime?
+  sourceOrderId String?
+  sourceOrder  Order?        @relation(fields: [sourceOrderId], references: [id], onDelete: SetNull)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([customerId, status])
+  @@index([sourceOrderId])
+}
+
+model CustomerTrustEvent {
+  id            String          @id @default(cuid())
+  customerId    String
+  customer      CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  staffUserId   String?
+  staffUser     StaffUser?      @relation(fields: [staffUserId], references: [id], onDelete: SetNull)
+  type          TrustEventType
+  reason        String?
+  createdAt     DateTime        @default(now())
+  resolvedAt    DateTime?
+
+  @@index([customerId])
+  @@index([staffUserId])
+}
+
+model StoreSettings {
+  id                          String   @id @default(cuid())
+  storeName                   String
+  pickupAddress               String
+  activeOrderLimitPerCustomer  Int     @default(1)
+  unpaidOrderExpiryMinutes     Int     @default(30)
+  newCustomerMaxItems          Int     @default(2)
+  enableTrustedRegularFlag     Boolean @default(true)
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+}
