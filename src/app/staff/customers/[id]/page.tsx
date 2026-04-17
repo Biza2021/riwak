@@ -81,7 +81,7 @@ export default async function StaffCustomerDetailPage({
               </div>
               <div className="rounded-2xl bg-[#f8f1e7] px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8b6b4c]">
-                  RÃ©compenses
+                  Récompenses
                 </p>
                 <p className="mt-2 text-xl font-semibold text-[#2d1b12]">
                   {customer.loyaltyAccount?.availableFreeDrinks ?? 0}
@@ -105,7 +105,7 @@ export default async function StaffCustomerDetailPage({
           />
 
           <Card className="space-y-3 p-5">
-            <p className="text-sm font-semibold text-[#8c6239]">DerniÃ¨res commandes</p>
+            <p className="text-sm font-semibold text-[#8c6239]">Dernières commandes</p>
             {customer.orders.length ? (
               <div className="space-y-3">
                 {customer.orders.slice(0, 6).map((order) => (
@@ -136,7 +136,7 @@ export default async function StaffCustomerDetailPage({
           </Card>
 
           <Card className="space-y-3 p-5">
-            <p className="text-sm font-semibold text-[#8c6239]">Historique fidÃ©litÃ©</p>
+            <p className="text-sm font-semibold text-[#8c6239]">Historique fidélité</p>
             {customer.loyaltyEvents.length ? (
               <div className="space-y-3">
                 {customer.loyaltyEvents.map((event) => (
@@ -163,7 +163,7 @@ export default async function StaffCustomerDetailPage({
                 ))}
               </div>
             ) : (
-              <Notice>Aucun historique fidÃ©litÃ©.</Notice>
+              <Notice>Aucun historique fidélité.</Notice>
             )}
           </Card>
 
@@ -178,7 +178,6 @@ export default async function StaffCustomerDetailPage({
         items={[
           { href: "/staff/orders", label: fr.navStaff.orders },
           { href: "/staff/customers", label: fr.navStaff.customers, active: true },
-          { href: "/staff/loyalty", label: fr.navStaff.loyalty },
           { href: "/staff/settings", label: fr.navStaff.settings },
         ]}
       />

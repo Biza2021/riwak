@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { BrandLogo } from "@/components/brand-logo";
 import { SubmitButton } from "@/components/submit-button";
 import {
   Screen,
@@ -27,8 +28,12 @@ export default async function StaffLoginPage({
   return (
     <Screen className="justify-center">
       <div className="space-y-5">
+        <BrandLogo
+          variant="primary"
+          priority
+          className="w-[110px] sm:w-[122px]"
+        />
         <SectionHeader
-          eyebrow={fr.staff.loginTitle}
           title={fr.staff.loginTitle}
           description={fr.auth.staffLoginBody}
         />

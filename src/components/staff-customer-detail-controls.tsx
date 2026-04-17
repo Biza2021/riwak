@@ -58,7 +58,7 @@ export function StaffCustomerDetailControls({
 
           {trustAction === "LIMIT" ? (
             <div>
-              <FieldLabel>DurÃ©e de limitation (heures)</FieldLabel>
+              <FieldLabel>Durée de limitation (heures)</FieldLabel>
               <TextField
                 name="limitHours"
                 type="number"
@@ -74,7 +74,7 @@ export function StaffCustomerDetailControls({
       </Card>
 
       <Card className="space-y-4 p-5">
-        <p className="text-sm font-semibold text-[#8c6239]">Ajuster la fidÃ©litÃ©</p>
+        <p className="text-sm font-semibold text-[#8c6239]">Ajuster la fidélité</p>
         <form action={adjustLoyaltyAction} className="space-y-3">
           <input type="hidden" name="customerId" value={customerId} />
           <input type="hidden" name="returnTo" value={currentPath} />

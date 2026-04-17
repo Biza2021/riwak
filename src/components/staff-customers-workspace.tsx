@@ -15,6 +15,7 @@ import {
   quickAddCustomerStampsAction,
   quickRedeemCustomerRewardAction,
 } from "@/lib/actions";
+import { BrandLogo } from "@/components/brand-logo";
 import { fr } from "@/content/fr";
 import { filterStaffCustomers } from "@/lib/customer-lookup";
 import { applyLoyaltyPurchase, redeemRewardState } from "@/lib/domain";
@@ -359,8 +360,8 @@ export function StaffCustomersWorkspace({
 
   return (
     <div className="space-y-5">
+      <BrandLogo variant="navbar" priority className="w-[116px] sm:w-[124px]" />
       <SectionHeader
-        eyebrow={fr.staff.customerTitle}
         title={fr.staff.customerTitle}
         description="Vue rapide du niveau client, de la fidélité et des derniers passages."
       />

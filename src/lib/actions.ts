@@ -775,7 +775,6 @@ export async function adjustLoyaltyAction(formData: FormData) {
   });
 
   revalidatePath(`/staff/customers/${customer.id}`);
-  revalidatePath("/staff/loyalty");
   revalidatePath("/app");
   revalidatePath("/rewards");
   redirect(safePath(payload.data.returnTo, `/staff/customers/${customer.id}`));
@@ -862,7 +861,6 @@ export async function quickAddCustomerStampsAction(input: {
 
   revalidatePath("/staff/customers");
   revalidatePath(`/staff/customers/${customer.id}`);
-  revalidatePath("/staff/loyalty");
   revalidatePath("/app");
   revalidatePath("/rewards");
   revalidatePath("/account");
@@ -961,7 +959,6 @@ export async function quickRedeemCustomerRewardAction(input: {
 
   revalidatePath("/staff/customers");
   revalidatePath(`/staff/customers/${customer.id}`);
-  revalidatePath("/staff/loyalty");
   revalidatePath("/app");
   revalidatePath("/rewards");
   revalidatePath("/account");

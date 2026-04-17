@@ -1,4 +1,4 @@
-const CACHE_NAME = "riwak-v2";
+const CACHE_NAME = "riwak-v5";
 const CORE_URLS = [
   "/",
   "/register",

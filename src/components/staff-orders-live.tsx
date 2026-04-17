@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+import { BrandLogo } from "@/components/brand-logo";
 import { fr } from "@/content/fr";
 import { formatCurrency, formatDateTime, formatTimeOnly } from "@/lib/format";
 import {
@@ -55,7 +56,7 @@ function statusFilterLinks(
           href={buildFilterHref(filter.key, showDemo)}
           className={`rounded-2xl px-3 py-3 text-center text-sm font-semibold transition ${
             activeStatus === filter.key
-              ? "bg-[#2d1b12] text-white"
+              ? "bg-[#7b5637] text-[#fffaf4] shadow-[0_10px_24px_rgba(123,86,55,0.22)]"
               : "bg-[#f3eadf] text-[#53402e]"
           }`}
         >
@@ -187,8 +188,8 @@ export function StaffOrdersLive({
 
   return (
     <div className="space-y-5">
+      <BrandLogo variant="navbar" priority className="w-[116px] sm:w-[124px]" />
       <SectionHeader
-        eyebrow={fr.staff.queueTitle}
         title={fr.staff.queueTitle}
         description={fr.staff.queueSubtitle}
       />

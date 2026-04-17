@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { BrandLogo } from "@/components/brand-logo";
 import { Card, PrimaryButton, Screen, SectionHeader } from "@/components/ui";
 import { fr } from "@/content/fr";
 import { getCurrentSession } from "@/lib/session";
@@ -19,6 +20,11 @@ export default async function HomePage() {
   return (
     <Screen>
       <div className="space-y-6">
+        <BrandLogo
+          variant="primary"
+          priority
+          className="w-[118px] sm:w-[132px]"
+        />
         <SectionHeader
           eyebrow={fr.landing.eyebrow}
           title={fr.landing.title}

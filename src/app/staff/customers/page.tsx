@@ -21,7 +21,6 @@ export default async function StaffCustomersPage() {
         items={[
           { href: "/staff/orders", label: fr.navStaff.orders },
           { href: "/staff/customers", label: fr.navStaff.customers, active: true },
-          { href: "/staff/loyalty", label: fr.navStaff.loyalty },
           { href: "/staff/settings", label: fr.navStaff.settings },
         ]}
       />

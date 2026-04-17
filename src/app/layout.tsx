@@ -28,10 +28,6 @@ export const metadata: Metadata = {
     title: "riwak",
     statusBarStyle: "default",
   },
-  icons: {
-    icon: "/icon",
-    apple: "/apple-icon",
-  },
 };
 
 export const viewport: Viewport = {

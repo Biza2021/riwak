@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { BrandLogo } from "@/components/brand-logo";
 import { SubmitButton } from "@/components/submit-button";
 import {
   Card,
@@ -26,8 +27,12 @@ export default async function LoginPage({
   return (
     <Screen>
       <div className="space-y-5">
+        <BrandLogo
+          variant="primary"
+          priority
+          className="w-[110px] sm:w-[122px]"
+        />
         <SectionHeader
-          eyebrow={fr.auth.loginTitle}
           title={fr.auth.loginTitle}
           description={fr.auth.loginBody}
         />

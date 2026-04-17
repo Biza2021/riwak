@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { BrandLogo } from "./brand-logo";
 import { Notice, SecondaryButton } from "./ui";
 
 type BeforeInstallPromptEvent = Event & {
@@ -75,8 +76,12 @@ export function InstallPrompt({
   }
 
   return (
-    <Notice title={title}>
+    <Notice>
       <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <BrandLogo variant="icon" className="w-8 shrink-0" />
+          <p className="font-semibold">{title}</p>
+        </div>
         <p>{body}</p>
         <p className="text-xs leading-5 opacity-80">{iosHint}</p>
         <div className="flex flex-wrap gap-2">

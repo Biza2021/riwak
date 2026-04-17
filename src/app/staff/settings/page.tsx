@@ -8,6 +8,7 @@ import {
   FieldLabel,
   Notice,
 } from "@/components/ui";
+import { BrandLogo } from "@/components/brand-logo";
 import { StaffTopNav } from "@/components/navigation";
 import { SubmitButton } from "@/components/submit-button";
 import { fr } from "@/content/fr";
@@ -38,8 +39,8 @@ export default async function StaffSettingsPage({
     <>
       <Screen className="pb-40">
         <div className="space-y-5">
+          <BrandLogo variant="navbar" priority className="w-[116px] sm:w-[124px]" />
           <SectionHeader
-            eyebrow={fr.settings.title}
             title={fr.settings.title}
             description={fr.settings.subtitle}
           />
@@ -262,7 +263,6 @@ export default async function StaffSettingsPage({
         items={[
           { href: "/staff/orders", label: fr.navStaff.orders },
           { href: "/staff/customers", label: fr.navStaff.customers },
-          { href: "/staff/loyalty", label: fr.navStaff.loyalty },
           { href: "/staff/settings", label: fr.navStaff.settings, active: true },
         ]}
       />

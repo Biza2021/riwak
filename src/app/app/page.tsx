@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AutoRefresh } from "@/components/auto-refresh";
+import { BrandLogo } from "@/components/brand-logo";
 import { CustomerBottomNav } from "@/components/navigation";
 import { InstallPrompt } from "@/components/install-prompt";
 import {
@@ -71,8 +72,8 @@ export default async function CustomerHomePage() {
       <Screen className="pb-36">
         <AutoRefresh intervalMs={20000} />
         <div className="space-y-5">
+          <BrandLogo variant="navbar" priority className="w-[116px] sm:w-[126px]" />
           <SectionHeader
-            eyebrow={fr.brand.short}
             title={fr.home.greeting(customer.fullName)}
             description={fr.tagline}
           />

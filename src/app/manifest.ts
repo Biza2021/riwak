@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 
+const APP_ICON_VERSION = "2026-04-17-appicon";
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "riwak",
@@ -13,19 +15,19 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#8c6239",
     icons: [
       {
-        src: "/icon",
+        src: `/pwa/riwak-192.png?v=${APP_ICON_VERSION}`,
         sizes: "192x192",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/apple-icon",
-        sizes: "180x180",
+        src: `/pwa/riwak-512.png?v=${APP_ICON_VERSION}`,
+        sizes: "512x512",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/icon",
+        src: `/pwa/riwak-512.png?v=${APP_ICON_VERSION}`,
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
