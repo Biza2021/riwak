@@ -105,6 +105,8 @@ npx prisma migrate dev
 npm run prisma:seed
 ```
 
+This command is for local/demo data only. Do not run it on a production database.
+
 ### 7. Start the app
 
 ```bash
@@ -184,20 +186,29 @@ Recommended production flow:
 
 1. Set `DATABASE_URL` in Railway
 2. Set the S3-compatible storage variables used for voice notes
-3. Build with:
+3. Set bootstrap credentials for the first privileged users:
+
+```bash
+BOOTSTRAP_ADMIN_EMAIL=...
+BOOTSTRAP_ADMIN_PASSWORD=...
+BOOTSTRAP_STAFF_EMAIL=...
+BOOTSTRAP_STAFF_PASSWORD=...
+```
+
+4. Build with:
 
 ```bash
 npm run prisma:generate
 npm run build
 ```
 
-4. Before starting a new release, run migrations:
+5. Before starting a new release, run migrations:
 
 ```bash
 npx prisma migrate deploy
 ```
 
-5. Start the app with:
+6. Start the app with:
 
 ```bash
 npm run start
@@ -210,6 +221,31 @@ Notes:
 - the app expects PostgreSQL in production
 - voice notes require an S3-compatible bucket reachable from the deployed app
 - service worker cache versions are bumped when icon or offline-shell assets change
+
+### Bootstrap Initial Staff/Admin Users
+
+For production, use the bootstrap script instead of the demo seed:
+
+```bash
+npm run prisma:bootstrap
+```
+
+This script:
+
+- reads `BOOTSTRAP_ADMIN_*` and `BOOTSTRAP_STAFF_*` from the environment
+- creates the admin/staff users only if they do not already exist
+- hashes passwords with the same bcrypt logic used by the app login flow
+- leaves existing users unchanged on repeated runs
+
+Recommended Railway flow:
+
+1. Add the `BOOTSTRAP_*` variables in the service environment.
+2. Open a shell in the deployed service container with [`railway ssh`](https://docs.railway.com/cli/ssh).
+3. Run `npm run prisma:bootstrap`.
+4. Verify team login works.
+5. Remove the `BOOTSTRAP_*` secrets afterward if you do not want to keep them in the environment.
+
+If you only need Railway variables locally, Railway documents that [`railway shell`](https://docs.railway.com/cli/shell) opens a local shell with service variables, and their [Variables docs](https://docs.railway.com/variables) note that service variables are also available to commands invoked by `railway run`. For the actual production bootstrap, using `railway ssh` into the deployed service is the safest manual path.
 
 ## Business Logic Notes
 
@@ -229,6 +265,7 @@ npm run lint
 npm test
 npm run prisma:generate
 npm run prisma:seed
+npm run prisma:bootstrap
 ```
 
 ## Files Worth Knowing
@@ -240,6 +277,7 @@ npm run prisma:seed
 - `src/content/fr.ts` contains the French UI copy
 - `prisma/schema.prisma` contains the full data model
 - `prisma/seed.ts` loads the demo dataset
+- `prisma/bootstrap.ts` creates initial production staff/admin accounts from environment variables
 
 ## Notes For Future Work
 
