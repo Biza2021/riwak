@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { fr } from "@/content/fr";
 import {
+  MAX_VOICE_NOTE_FILE_BYTES,
   MAX_VOICE_NOTE_DATA_URL_LENGTH,
   MAX_VOICE_NOTE_SECONDS,
 } from "@/lib/domain";
@@ -183,7 +184,7 @@ export function VoiceNoteField() {
         const blob = new Blob(chunksRef.current, { type: mimeType });
         chunksRef.current = [];
 
-        if (blob.size <= 0 || blob.size > MAX_VOICE_NOTE_DATA_URL_LENGTH) {
+        if (blob.size <= 0 || blob.size > MAX_VOICE_NOTE_FILE_BYTES) {
           setRecordedDurationSec(0);
           setVoiceNoteDataUrl("");
           setVoiceNoteMimeType("");

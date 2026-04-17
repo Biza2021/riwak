@@ -154,9 +154,10 @@ model Order {
   customerTypeSnapshot CustomerType
   sugarCount           Int           @default(0)
   notes                String?
-  voiceNoteDataUrl     String?
+  voiceNoteStorageKey  String?
   voiceNoteMimeType    String?
   voiceNoteDurationSec Int?
+  voiceNoteFileSizeBytes Int?
   orderItems           OrderItem[]
   rewards              Reward[]
   loyaltyEvents        LoyaltyStampEvent[]

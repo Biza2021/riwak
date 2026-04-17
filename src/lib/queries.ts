@@ -243,8 +243,10 @@ export async function getOrderById(orderId: string) {
       isPaidAtShop: true,
       sugarCount: true,
       notes: true,
-      voiceNoteDataUrl: true,
+      voiceNoteStorageKey: true,
+      voiceNoteMimeType: true,
       voiceNoteDurationSec: true,
+      voiceNoteFileSizeBytes: true,
       customer: {
         select: {
           fullName: true,

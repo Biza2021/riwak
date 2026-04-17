@@ -21,6 +21,12 @@ import {
 } from "./domain";
 import { createSession, clearSession, requireCustomerSession, requireStaffSession } from "./session";
 import { ensureStoreSettings, expireOverdueOrders } from "./queries";
+import {
+  deleteVoiceNote,
+  isVoiceNoteStorageError,
+  isVoiceNoteStorageConfigured,
+  uploadVoiceNote,
+} from "./voice-note-storage";
 
 const customerRegisterSchema = z.object({
   fullName: z.string().trim().min(2).max(80),
@@ -366,6 +372,10 @@ export async function createOrderAction(formData: FormData) {
     redirectWithError(returnTo, "BAD_FORM");
   }
 
+  if (voiceNote.value && !isVoiceNoteStorageConfigured()) {
+    redirectWithError(returnTo, "VOICE_NOTE_UNAVAILABLE");
+  }
+
   const settings = await ensureStoreSettings();
   const now = new Date();
   const customerSnapshot = displayCustomerType({
@@ -389,6 +399,32 @@ export async function createOrderAction(formData: FormData) {
   const expiresAt = computeOrderExpiresAt(now, settings.unpaidOrderExpiryMinutes);
   const quantity = payload.data.quantity;
   const totalAmount = new Prisma.Decimal(Number(menuItem.price) * quantity);
+
+  let storedVoiceNote:
+    | {
+        storageKey: string;
+        mimeType: string;
+        durationSec: number;
+        fileSizeBytes: number;
+      }
+    | null = null;
+
+  if (voiceNote.value) {
+    try {
+      storedVoiceNote = await uploadVoiceNote({
+        customerId: customer.id,
+        dataUrl: voiceNote.value.dataUrl,
+        mimeType: voiceNote.value.mimeType,
+        durationSec: voiceNote.value.durationSec,
+      });
+    } catch (error) {
+      if (isVoiceNoteStorageError(error) && error.code === "TOO_LARGE") {
+        redirectWithError(returnTo, "VOICE_NOTE_TOO_LARGE");
+      }
+
+      redirectWithError(returnTo, "VOICE_NOTE_UNAVAILABLE");
+    }
+  }
 
   let orderId: string;
 
@@ -435,9 +471,10 @@ export async function createOrderAction(formData: FormData) {
             customerTypeSnapshot: customerSnapshot,
             sugarCount: payload.data.sugarCount,
             notes: payload.data.notes || null,
-            voiceNoteDataUrl: voiceNote.value?.dataUrl ?? null,
-            voiceNoteMimeType: voiceNote.value?.mimeType ?? null,
-            voiceNoteDurationSec: voiceNote.value?.durationSec ?? null,
+            voiceNoteStorageKey: storedVoiceNote?.storageKey ?? null,
+            voiceNoteMimeType: storedVoiceNote?.mimeType ?? null,
+            voiceNoteDurationSec: storedVoiceNote?.durationSec ?? null,
+            voiceNoteFileSizeBytes: storedVoiceNote?.fileSizeBytes ?? null,
             orderItems: {
               create: {
                 menuItemId: menuItem.id,
@@ -473,7 +510,14 @@ export async function createOrderAction(formData: FormData) {
       error instanceof ActionConflictError ||
       isSerializableTransactionConflict(error)
     ) {
+      if (storedVoiceNote?.storageKey) {
+        await deleteVoiceNote(storedVoiceNote.storageKey).catch(() => undefined);
+      }
       redirectWithError(returnTo, "ACTIVE_ORDER_LIMIT");
+    }
+
+    if (storedVoiceNote?.storageKey) {
+      await deleteVoiceNote(storedVoiceNote.storageKey).catch(() => undefined);
     }
 
     throw error;

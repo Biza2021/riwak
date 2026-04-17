@@ -14,6 +14,7 @@ import { fr } from "@/content/fr";
 import { updateOrderStatusAction } from "@/lib/actions";
 import { getOrderById } from "@/lib/queries";
 import { requireStaffSession } from "@/lib/session";
+import { getVoiceNotePlaybackUrl } from "@/lib/voice-note-storage";
 import { formatDateTime, formatTimeOnly, formatCurrency } from "@/lib/format";
 import {
   customerTypeLabel,
@@ -45,6 +46,10 @@ export default async function StaffOrderDetailPage({
   if (!order) {
     redirect("/staff/orders");
   }
+
+  const voiceNotePlaybackUrl = order.voiceNoteStorageKey
+    ? await getVoiceNotePlaybackUrl(order.voiceNoteStorageKey).catch(() => null)
+    : null;
 
   return (
     <>
@@ -143,7 +148,7 @@ export default async function StaffOrderDetailPage({
                 ) : null}
               </div>
 
-              {order.voiceNoteDataUrl ? (
+              {order.voiceNoteStorageKey ? (
                 <div className="mt-3 rounded-2xl bg-white px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8b6b4c]">
@@ -153,12 +158,18 @@ export default async function StaffOrderDetailPage({
                       <Badge tone="neutral">{order.voiceNoteDurationSec}s</Badge>
                     ) : null}
                   </div>
-                  <audio
-                    controls
-                    preload="none"
-                    src={order.voiceNoteDataUrl}
-                    className="mt-3 w-full"
-                  />
+                  {voiceNotePlaybackUrl ? (
+                    <audio
+                      controls
+                      preload="none"
+                      src={voiceNotePlaybackUrl}
+                      className="mt-3 w-full"
+                    />
+                  ) : (
+                    <p className="mt-3 text-sm text-[#6d5644]">
+                      {fr.order.voiceNotePlaybackUnavailable}
+                    </p>
+                  )}
                 </div>
               ) : null}
             </div>

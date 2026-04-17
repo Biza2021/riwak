@@ -7,6 +7,7 @@ export const SUGAR_OPTIONS = [0, 1, 2, 3] as const;
 export type SugarCount = (typeof SUGAR_OPTIONS)[number];
 
 export const MAX_VOICE_NOTE_SECONDS = 15;
+export const MAX_VOICE_NOTE_FILE_BYTES = 512_000;
 export const MAX_VOICE_NOTE_DATA_URL_LENGTH = 750_000;
 
 export const ORDER_STATUSES = [

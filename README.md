@@ -33,6 +33,7 @@ I kept Prisma on version 6 for this MVP because it keeps the schema and migratio
 - trust levels for new, returning, trusted, and limited customers
 - admin menu/configuration screen
 - PWA manifest, install prompt, icons, and a basic offline shell
+- S3-compatible object storage for short customer voice notes
 - demo data for customers, staff, menu items, orders, rewards, and trust states
 - tests for the core business rules
 
@@ -60,6 +61,18 @@ If you are on Windows PowerShell:
 
 ```powershell
 Copy-Item .env.example .env
+```
+
+Voice notes require S3-compatible storage variables as well:
+
+```env
+S3_BUCKET=
+S3_REGION=us-east-1
+S3_ENDPOINT=
+S3_ACCESS_KEY_ID=
+S3_SECRET_ACCESS_KEY=
+S3_FORCE_PATH_STYLE=true
+S3_SIGNED_URL_TTL_SECONDS=3600
 ```
 
 ### 2. Start PostgreSQL
@@ -163,26 +176,28 @@ The menu is stored in the database so the admin screen can add, hide, rename, or
 - visible add-to-home-screen nudge
 - basic offline page and service worker
 - live operational routes and API endpoints bypass the offline cache to avoid stale queue/status data
+- voice-note files are stored in object storage and only metadata stays in PostgreSQL
 
 ## Railway Deployment
 
 Recommended production flow:
 
 1. Set `DATABASE_URL` in Railway
-2. Build with:
+2. Set the S3-compatible storage variables used for voice notes
+3. Build with:
 
 ```bash
 npm run prisma:generate
 npm run build
 ```
 
-3. Before starting a new release, run migrations:
+4. Before starting a new release, run migrations:
 
 ```bash
 npx prisma migrate deploy
 ```
 
-4. Start the app with:
+5. Start the app with:
 
 ```bash
 npm run start
@@ -193,6 +208,7 @@ Notes:
 - `next start` is sufficient for Railway with the current setup
 - Prisma migrations are committed in `prisma/migrations`
 - the app expects PostgreSQL in production
+- voice notes require an S3-compatible bucket reachable from the deployed app
 - service worker cache versions are bumped when icon or offline-shell assets change
 
 ## Business Logic Notes
