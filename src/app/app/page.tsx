@@ -50,13 +50,13 @@ export default async function CustomerHomePage() {
   const customerProfile = session.user.customerProfile;
 
   if (!customerProfile) {
-    redirect("/register");
+    redirect("/login");
   }
 
   const data = await getCustomerHomeData(customerProfile.id);
 
   if (!data.customer) {
-    redirect("/register");
+    redirect("/login");
   }
 
   const customer = data.customer;

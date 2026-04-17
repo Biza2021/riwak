@@ -157,7 +157,7 @@ export async function registerCustomerAction(formData: FormData) {
   });
 
   if (!payload.success) {
-    redirectWithError("/register", "BAD_FORM");
+    redirectWithError("/login", "BAD_FORM");
   }
 
   const fullName = payload.data.fullName;
@@ -218,7 +218,7 @@ export async function customerLoginAction(formData: FormData) {
   });
 
   if (!payload.success) {
-    redirectWithError("/register", "BAD_FORM");
+    redirectWithError("/login", "BAD_FORM");
   }
 
   const phoneNumber = normalizeCustomerPhone(payload.data.phoneNumber);
@@ -233,7 +233,7 @@ export async function customerLoginAction(formData: FormData) {
   });
 
   if (!customer) {
-    redirectWithError("/register", "INVALID_PIN");
+    redirectWithError("/login", "INVALID_PIN");
   }
 
   await createSession(customer.userId);

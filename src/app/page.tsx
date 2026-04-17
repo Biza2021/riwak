@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { InstallPrompt } from "@/components/install-prompt";
-import { Screen, Card, SectionHeader, SecondaryButton } from "@/components/ui";
+import { Card, PrimaryButton, Screen, SectionHeader } from "@/components/ui";
 import { fr } from "@/content/fr";
 import { getCurrentSession } from "@/lib/session";
 
@@ -18,7 +17,7 @@ export default async function HomePage() {
   }
 
   return (
-    <Screen className="justify-between">
+    <Screen>
       <div className="space-y-6">
         <SectionHeader
           eyebrow={fr.landing.eyebrow}
@@ -26,7 +25,7 @@ export default async function HomePage() {
           description={fr.landing.subtitle}
         />
 
-        <Card className="space-y-4 p-5">
+        <Card className="space-y-5 p-5">
           <div className="space-y-2">
             <p className="text-sm font-semibold text-[#8c6239]">
               {fr.landing.registerCardTitle}
@@ -35,37 +34,37 @@ export default async function HomePage() {
               {fr.landing.registerCardBody}
             </p>
           </div>
+
           <Link href="/register" className="block">
-            <SecondaryButton type="button" className="w-full">
+            <PrimaryButton type="button" className="w-full">
               {fr.actions.register}
-            </SecondaryButton>
+            </PrimaryButton>
           </Link>
-          <div className="rounded-2xl bg-[#faf3e9] px-4 py-3 text-sm text-[#6d5644]">
-            {fr.landing.returningCardTitle}
-            <div className="mt-1">
-              <Link href="/register#connexion" className="font-semibold text-[#8c6239]">
+
+          <div className="rounded-2xl bg-[#faf3e9] px-4 py-3">
+            <p className="text-sm text-[#6d5644]">
+              {fr.landing.returningCardTitle}{" "}
+              <Link href="/login" className="font-semibold text-[#8c6239]">
                 {fr.actions.login}
               </Link>
-              {" • "}
-              <Link href="/staff/login" className="font-semibold text-[#8c6239]">
-                {fr.landing.staffCardTitle}
-              </Link>
-            </div>
+            </p>
+            <p className="mt-1 text-xs leading-5 text-[#8f7562]">
+              {fr.landing.returningInlineBody}
+            </p>
           </div>
         </Card>
 
-        <InstallPrompt
-          title={fr.install.title}
-          body={fr.install.body}
-          iosHint={fr.install.iosHint}
-        />
-      </div>
-
-      <div className="space-y-3 pt-4 text-center text-xs leading-5 text-[#7a6656]">
-        <p>{fr.landing.staffCardBody}</p>
-        <Link href="/staff/login" className="font-semibold text-[#8c6239]">
-          {fr.landing.staffCardTitle}
-        </Link>
+        <div className="pt-1 text-center">
+          <p className="text-xs leading-5 text-[#7a6656]">
+            {fr.landing.staffLinkBody}
+          </p>
+          <Link
+            href="/staff/login"
+            className="mt-1 inline-flex text-sm font-semibold text-[#8c6239]"
+          >
+            {fr.landing.staffCardTitle}
+          </Link>
+        </div>
       </div>
     </Screen>
   );

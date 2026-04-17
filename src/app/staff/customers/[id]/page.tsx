@@ -1,26 +1,26 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { StaffCustomerDetailControls } from "@/components/staff-customer-detail-controls";
 import { StaffTopNav } from "@/components/navigation";
-import { SubmitButton } from "@/components/submit-button";
 import {
-  Screen,
-  Card,
-  SectionHeader,
   Badge,
-  SecondaryButton,
-  TextField,
-  TextAreaField,
-  FieldLabel,
-  SelectField,
+  Card,
   Notice,
+  Screen,
+  SectionHeader,
+  SecondaryButton,
 } from "@/components/ui";
 import { fr } from "@/content/fr";
-import { adjustLoyaltyAction, updateTrustAction } from "@/lib/actions";
-import { getStaffCustomerDetail } from "@/lib/queries";
-import { requireStaffSession } from "@/lib/session";
 import { formatDateTime, formatMemberId } from "@/lib/format";
-import { customerTypeLabel, customerTypeTone, orderStatusLabel, orderStatusTone } from "@/lib/presentation";
+import { getStaffCustomerDetail } from "@/lib/queries";
+import {
+  customerTypeLabel,
+  customerTypeTone,
+  orderStatusLabel,
+  orderStatusTone,
+} from "@/lib/presentation";
+import { requireStaffSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -81,7 +81,7 @@ export default async function StaffCustomerDetailPage({
               </div>
               <div className="rounded-2xl bg-[#f8f1e7] px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8b6b4c]">
-                  Récompenses
+                  RÃ©compenses
                 </p>
                 <p className="mt-2 text-xl font-semibold text-[#2d1b12]">
                   {customer.loyaltyAccount?.availableFreeDrinks ?? 0}
@@ -98,57 +98,14 @@ export default async function StaffCustomerDetailPage({
             ) : null}
           </Card>
 
-          <Card className="space-y-4 p-5">
-            <p className="text-sm font-semibold text-[#8c6239]">
-              {fr.staff.trustTitle}
-            </p>
-            <form action={updateTrustAction} className="space-y-4">
-              <input type="hidden" name="customerId" value={customer.id} />
-              <input type="hidden" name="returnTo" value={currentPath} />
-              <div>
-                <FieldLabel>Action</FieldLabel>
-                <SelectField name="action" defaultValue="NOTE">
-                  <option value="NOTE">Note</option>
-                  <option value="TRUST">{fr.trustActions.trusted}</option>
-                  <option value="LIMIT">{fr.trustActions.limited}</option>
-                  <option value="CLEAR">{fr.trustActions.clearLimit}</option>
-                </SelectField>
-              </div>
-              <div>
-                <FieldLabel>Raison</FieldLabel>
-                <TextAreaField name="reason" placeholder="Contexte client, remarque staff" />
-              </div>
-              <div>
-                <FieldLabel>Durée de limitation (heures)</FieldLabel>
-                <TextField name="limitHours" type="number" min={1} max={720} defaultValue={72} />
-              </div>
-              <SubmitButton className="w-full">
-                {fr.actions.save}
-              </SubmitButton>
-            </form>
-          </Card>
-
-          <Card className="space-y-4 p-5">
-            <p className="text-sm font-semibold text-[#8c6239]">Ajuster la fidélité</p>
-            <form action={adjustLoyaltyAction} className="space-y-4">
-              <input type="hidden" name="customerId" value={customer.id} />
-              <input type="hidden" name="returnTo" value={currentPath} />
-              <div>
-                <FieldLabel>Delta de tampons</FieldLabel>
-                <TextField name="delta" type="number" min={-10} max={10} defaultValue={1} />
-              </div>
-              <div>
-                <FieldLabel>Raison</FieldLabel>
-                <TextAreaField name="reason" placeholder="Correction manuelle, geste commercial" />
-              </div>
-              <SubmitButton className="w-full">
-                Appliquer
-              </SubmitButton>
-            </form>
-          </Card>
+          <StaffCustomerDetailControls
+            customerId={customer.id}
+            currentPath={currentPath}
+            customerType={customer.customerType}
+          />
 
           <Card className="space-y-3 p-5">
-            <p className="text-sm font-semibold text-[#8c6239]">Dernières commandes</p>
+            <p className="text-sm font-semibold text-[#8c6239]">DerniÃ¨res commandes</p>
             {customer.orders.length ? (
               <div className="space-y-3">
                 {customer.orders.slice(0, 6).map((order) => (
@@ -179,7 +136,7 @@ export default async function StaffCustomerDetailPage({
           </Card>
 
           <Card className="space-y-3 p-5">
-            <p className="text-sm font-semibold text-[#8c6239]">Historique fidélité</p>
+            <p className="text-sm font-semibold text-[#8c6239]">Historique fidÃ©litÃ©</p>
             {customer.loyaltyEvents.length ? (
               <div className="space-y-3">
                 {customer.loyaltyEvents.map((event) => (
@@ -199,12 +156,14 @@ export default async function StaffCustomerDetailPage({
                         {event.stampDelta > 0 ? `+${event.stampDelta}` : `${event.stampDelta}`}
                       </Badge>
                     </div>
-                    {event.notes ? <p className="mt-2 text-xs leading-5 text-[#6d5644]">{event.notes}</p> : null}
+                    {event.notes ? (
+                      <p className="mt-2 text-xs leading-5 text-[#6d5644]">{event.notes}</p>
+                    ) : null}
                   </div>
                 ))}
               </div>
             ) : (
-              <Notice>Aucun historique fidélité.</Notice>
+              <Notice>Aucun historique fidÃ©litÃ©.</Notice>
             )}
           </Card>
 
