@@ -96,6 +96,9 @@ export default async function StaffOrderDetailPage({
               <Badge tone={customerTypeTone(order.customer.customerType)}>
                 {customerTypeLabel(order.customer.customerType)}
               </Badge>
+              <Badge tone="gold">
+                {fr.common.sugar} {order.sugarCount}
+              </Badge>
               {order.customer.loyaltyAccount ? (
                 <Badge tone="gold">
                   {order.customer.loyaltyAccount.currentStampCount}/5
@@ -111,7 +114,53 @@ export default async function StaffOrderDetailPage({
                 {fr.staff.activeUnpaidLabel}: {formatDateTime(order.expiresAt)}
               </p>
               <p className="mt-1">Créée le {formatDateTime(order.placedAt)}</p>
-              {order.notes ? <p className="mt-1">{order.notes}</p> : null}
+            </div>
+
+            <div className="rounded-2xl border border-[#e1cfb7] bg-[#fcf7ef] p-4">
+              <p className="text-sm font-semibold text-[#8c6239]">
+                {fr.order.quickInstructionsTitle}
+              </p>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl bg-white px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8b6b4c]">
+                    {fr.common.sugar}
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-[#2d1b12]">
+                    {order.sugarCount}
+                  </p>
+                </div>
+
+                {order.notes ? (
+                  <div className="rounded-2xl bg-white px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8b6b4c]">
+                      {fr.order.writtenNoteLabel}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-[#2d1b12]">
+                      {order.notes}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+
+              {order.voiceNoteDataUrl ? (
+                <div className="mt-3 rounded-2xl bg-white px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8b6b4c]">
+                      {fr.order.voiceNoteLabel}
+                    </p>
+                    {order.voiceNoteDurationSec ? (
+                      <Badge tone="neutral">{order.voiceNoteDurationSec}s</Badge>
+                    ) : null}
+                  </div>
+                  <audio
+                    controls
+                    preload="none"
+                    src={order.voiceNoteDataUrl}
+                    className="mt-3 w-full"
+                  />
+                </div>
+              ) : null}
             </div>
           </Card>
 
@@ -141,7 +190,9 @@ export default async function StaffOrderDetailPage({
                 <p className="font-semibold text-[#2d1b12]">
                   {item.menuItem.name} x{item.quantity}
                 </p>
-                <p className="mt-1">{item.notes || "Sans note"}</p>
+                <p className="mt-1">
+                  {formatCurrency(item.unitPrice)} {fr.common.each}
+                </p>
               </div>
             ))}
           </Card>

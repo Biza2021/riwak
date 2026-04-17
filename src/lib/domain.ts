@@ -3,6 +3,12 @@ export const LOYALTY_STAMP_THRESHOLD = 5;
 export const PICKUP_OPTIONS = [0, 10, 15, 20] as const;
 export type PickupOptionMinutes = (typeof PICKUP_OPTIONS)[number];
 
+export const SUGAR_OPTIONS = [0, 1, 2, 3] as const;
+export type SugarCount = (typeof SUGAR_OPTIONS)[number];
+
+export const MAX_VOICE_NOTE_SECONDS = 15;
+export const MAX_VOICE_NOTE_DATA_URL_LENGTH = 750_000;
+
 export const ORDER_STATUSES = [
   "RECEIVED",
   "ACCEPTED",
@@ -154,6 +160,74 @@ export function canCreateOrder(params: {
   }
 
   return { allowed: true as const };
+}
+
+export function isValidSugarCount(value: number): value is SugarCount {
+  return SUGAR_OPTIONS.includes(value as SugarCount);
+}
+
+export function normalizeVoiceNoteInput(input: {
+  dataUrl?: string | null;
+  mimeType?: string | null;
+  durationSec?: number | null;
+}) {
+  const dataUrl = input.dataUrl?.trim() ?? "";
+  const mimeType = input.mimeType?.trim() ?? "";
+  const durationSec =
+    typeof input.durationSec === "number" && Number.isFinite(input.durationSec)
+      ? Math.trunc(input.durationSec)
+      : null;
+
+  if (!dataUrl && !mimeType && !durationSec) {
+    return {
+      ok: true as const,
+      value: null,
+    };
+  }
+
+  if (!dataUrl || !mimeType || !durationSec) {
+    return {
+      ok: false as const,
+      reason: "incomplete",
+    };
+  }
+
+  if (!mimeType.startsWith("audio/")) {
+    return {
+      ok: false as const,
+      reason: "mime",
+    };
+  }
+
+  if (durationSec < 1 || durationSec > MAX_VOICE_NOTE_SECONDS) {
+    return {
+      ok: false as const,
+      reason: "duration",
+    };
+  }
+
+  if (!dataUrl.startsWith(`data:${mimeType};base64,`)) {
+    return {
+      ok: false as const,
+      reason: "payload",
+    };
+  }
+
+  if (dataUrl.length > MAX_VOICE_NOTE_DATA_URL_LENGTH) {
+    return {
+      ok: false as const,
+      reason: "size",
+    };
+  }
+
+  return {
+    ok: true as const,
+    value: {
+      dataUrl,
+      mimeType,
+      durationSec,
+    },
+  };
 }
 
 export function applyLoyaltyPurchase(params: {

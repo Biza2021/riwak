@@ -2,7 +2,19 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { CustomerBottomNav } from "@/components/navigation";
-import { Screen, Card, SectionHeader, TextField, TextAreaField, PrimaryButton, SecondaryButton, Badge, Notice } from "@/components/ui";
+import { VoiceNoteField } from "@/components/voice-note-field";
+import {
+  Screen,
+  Card,
+  SectionHeader,
+  TextField,
+  TextAreaField,
+  PrimaryButton,
+  SecondaryButton,
+  Badge,
+  Notice,
+  FieldLabel,
+} from "@/components/ui";
 import { fr } from "@/content/fr";
 import { createOrderAction } from "@/lib/actions";
 import { getMenuItemById, getOrderById } from "@/lib/queries";
@@ -10,7 +22,12 @@ import { requireCustomerSession } from "@/lib/session";
 import { getErrorMessage } from "@/lib/messages";
 import { formatCurrency } from "@/lib/format";
 import { pickupLabel, orderStatusLabel } from "@/lib/presentation";
-import { PICKUP_OPTIONS, type PickupOptionMinutes } from "@/lib/domain";
+import {
+  PICKUP_OPTIONS,
+  SUGAR_OPTIONS,
+  isValidSugarCount,
+  type PickupOptionMinutes,
+} from "@/lib/domain";
 
 export const dynamic = "force-dynamic";
 
@@ -31,13 +48,19 @@ export default async function OrderReviewPage({
   const explicitMenuItemId = readParam(params, "menuItemId");
   const parsedQuantity = Number.parseInt(readParam(params, "quantity") || "1", 10);
   const parsedPickupMinutes = Number.parseInt(readParam(params, "pickupMinutes") || "10", 10);
+  const parsedSugarCount = Number.parseInt(readParam(params, "sugarCount") || "0", 10);
   const explicitQuantity = Number.isFinite(parsedQuantity) ? parsedQuantity : 1;
   const explicitPickupMinutes = (Number.isFinite(parsedPickupMinutes) ? parsedPickupMinutes : 10) as PickupOptionMinutes;
+  const explicitSugarCount =
+    Number.isFinite(parsedSugarCount) && isValidSugarCount(parsedSugarCount)
+      ? parsedSugarCount
+      : 0;
   const explicitNotes = readParam(params, "notes");
 
   let menuItemId = explicitMenuItemId;
   let quantity = explicitQuantity;
   const pickupMinutes = explicitPickupMinutes;
+  let sugarCount = explicitSugarCount;
   let notes = explicitNotes;
 
   if (!menuItemId && repeatFrom) {
@@ -46,6 +69,10 @@ export default async function OrderReviewPage({
     if (firstItem) {
       menuItemId = firstItem.menuItemId;
       quantity = firstItem.quantity;
+      sugarCount =
+        repeatedOrder && isValidSugarCount(repeatedOrder.sugarCount)
+          ? repeatedOrder.sugarCount
+          : 0;
       notes = firstItem.notes ?? repeatedOrder?.notes ?? "";
     }
   }
@@ -63,6 +90,7 @@ export default async function OrderReviewPage({
     menuItemId,
     quantity: String(quantity),
     pickupMinutes: String(pickupMinutes),
+    sugarCount: String(sugarCount),
     notes,
     ...(repeatFrom ? { repeatFrom } : {}),
   }).toString()}`;
@@ -125,20 +153,54 @@ export default async function OrderReviewPage({
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-[#533728]">
-                  {fr.common.notesOptional}
-                </label>
-                <TextAreaField
-                  name="notes"
-                  defaultValue={notes}
-                  placeholder={fr.forms.notesPlaceholder}
-                />
+                <div className="space-y-3 rounded-[1.35rem] border border-[#e1cfb7] bg-[#fcf7ef] p-4">
+                  <div>
+                    <p className="text-sm font-semibold text-[#533728]">
+                      {fr.order.quickInstructionsTitle}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[#7c6654]">
+                      {fr.order.reviewBody}
+                    </p>
+                  </div>
+
+                  <div>
+                    <FieldLabel>{fr.common.sugar}</FieldLabel>
+                    <div className="grid grid-cols-4 gap-2">
+                      {SUGAR_OPTIONS.map((option) => (
+                        <label key={option} className="cursor-pointer">
+                          <input
+                            type="radio"
+                            name="sugarCount"
+                            value={option}
+                            defaultChecked={option === sugarCount}
+                            className="peer sr-only"
+                          />
+                          <span className="flex min-h-12 items-center justify-center rounded-2xl border border-[#dcc6ad] bg-white text-base font-semibold text-[#533728] transition peer-checked:border-[#8c6239] peer-checked:bg-[#8c6239] peer-checked:text-white">
+                            {option}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <FieldLabel>{fr.order.writtenNoteLabel}</FieldLabel>
+                    <TextAreaField
+                      name="notes"
+                      defaultValue={notes}
+                      placeholder={fr.forms.notesPlaceholder}
+                    />
+                  </div>
+
+                  <VoiceNoteField />
+                </div>
               </div>
 
               <div className="rounded-2xl bg-[#fff6e8] p-4 text-sm leading-6 text-[#6d5644]">
                 <p className="font-semibold text-[#2d1b12]">{fr.order.reviewBody}</p>
                 <p className="mt-1">{fr.common.status}: {orderStatusLabel("RECEIVED")}</p>
                 <p>{fr.common.pickupTime}: {pickupLabel(pickupMinutes)}</p>
+                <p>{fr.common.sugar}: {sugarCount}</p>
               </div>
 
               <PrimaryButton type="submit" className="w-full">

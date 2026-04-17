@@ -12,6 +12,9 @@ import {
   canCreateOrder,
   computeOrderExpiresAt,
   displayCustomerType,
+  isValidSugarCount,
+  MAX_VOICE_NOTE_SECONDS,
+  normalizeVoiceNoteInput,
   slugifyMenuName,
 } from "./domain";
 import { createSession, clearSession, requireCustomerSession, requireStaffSession } from "./session";
@@ -39,7 +42,11 @@ const createOrderSchema = z.object({
   menuItemId: z.string().min(1),
   quantity: z.coerce.number().int().min(1).max(20),
   pickupMinutes: z.coerce.number().int().refine((value) => [0, 10, 15, 20].includes(value)),
+  sugarCount: z.coerce.number().int().refine(isValidSugarCount),
   notes: z.string().trim().max(200).optional().default(""),
+  voiceNoteDataUrl: z.string().trim().max(800_000).optional().default(""),
+  voiceNoteMimeType: z.string().trim().max(120).optional().default(""),
+  voiceNoteDurationSec: z.coerce.number().int().min(1).max(MAX_VOICE_NOTE_SECONDS).optional(),
   returnTo: z.string().optional(),
 });
 
@@ -259,11 +266,25 @@ export async function createOrderAction(formData: FormData) {
     menuItemId: formText(formData, "menuItemId"),
     quantity: formText(formData, "quantity"),
     pickupMinutes: formText(formData, "pickupMinutes"),
+    sugarCount: formText(formData, "sugarCount"),
     notes: formText(formData, "notes"),
+    voiceNoteDataUrl: formText(formData, "voiceNoteDataUrl"),
+    voiceNoteMimeType: formText(formData, "voiceNoteMimeType"),
+    voiceNoteDurationSec: formText(formData, "voiceNoteDurationSec") || undefined,
     returnTo: returnTo || undefined,
   });
 
   if (!payload.success) {
+    redirectWithError(returnTo, "BAD_FORM");
+  }
+
+  const voiceNote = normalizeVoiceNoteInput({
+    dataUrl: payload.data.voiceNoteDataUrl,
+    mimeType: payload.data.voiceNoteMimeType,
+    durationSec: payload.data.voiceNoteDurationSec ?? null,
+  });
+
+  if (!voiceNote.ok) {
     redirectWithError(returnTo, "BAD_FORM");
   }
 
@@ -330,7 +351,11 @@ export async function createOrderAction(formData: FormData) {
         customerNameSnapshot: customer.fullName,
         customerPhoneSnapshot: customer.phoneNumber,
         customerTypeSnapshot: customerSnapshot,
+        sugarCount: payload.data.sugarCount,
         notes: payload.data.notes || null,
+        voiceNoteDataUrl: voiceNote.value?.dataUrl ?? null,
+        voiceNoteMimeType: voiceNote.value?.mimeType ?? null,
+        voiceNoteDurationSec: voiceNote.value?.durationSec ?? null,
         orderItems: {
           create: {
             menuItemId: menuItem.id,

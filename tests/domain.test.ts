@@ -6,6 +6,8 @@ import {
   compareStaffQueueOrders,
   computeOrderExpiresAt,
   displayCustomerType,
+  isValidSugarCount,
+  normalizeVoiceNoteInput,
   redeemRewardState,
 } from "../src/lib/domain";
 
@@ -77,6 +79,38 @@ describe("order rules", () => {
     ].sort(compareStaffQueueOrders);
 
     expect(orders.map((order) => order.id)).toEqual(["newer", "older"]);
+  });
+
+  it("accepts only the configured sugar options", () => {
+    expect(isValidSugarCount(2)).toBe(true);
+    expect(isValidSugarCount(4)).toBe(false);
+  });
+
+  it("accepts a valid short voice note payload", () => {
+    const result = normalizeVoiceNoteInput({
+      dataUrl: "data:audio/webm;base64,ZmFrZQ==",
+      mimeType: "audio/webm",
+      durationSec: 12,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        dataUrl: "data:audio/webm;base64,ZmFrZQ==",
+        mimeType: "audio/webm",
+        durationSec: 12,
+      },
+    });
+  });
+
+  it("rejects an oversized or invalid voice note payload", () => {
+    const result = normalizeVoiceNoteInput({
+      dataUrl: "data:text/plain;base64,ZmFrZQ==",
+      mimeType: "text/plain",
+      durationSec: 3,
+    });
+
+    expect(result.ok).toBe(false);
   });
 });
 
