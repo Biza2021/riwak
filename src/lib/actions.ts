@@ -15,6 +15,7 @@ import {
   isValidSugarCount,
   MAX_VOICE_NOTE_SECONDS,
   normalizeVoiceNoteInput,
+  redeemRewardState,
   slugifyMenuName,
 } from "./domain";
 import { createSession, clearSession, requireCustomerSession, requireStaffSession } from "./session";
@@ -79,6 +80,15 @@ const loyaltyAdjustSchema = z.object({
   returnTo: z.string().optional(),
 });
 
+const quickStampSchema = z.object({
+  customerId: z.string().min(1),
+  delta: z.union([z.literal(1), z.literal(2)]),
+});
+
+const quickRewardSchema = z.object({
+  customerId: z.string().min(1),
+});
+
 const rewardRedeemSchema = z.object({
   rewardId: z.string().min(1).optional(),
   returnTo: z.string().optional(),
@@ -124,6 +134,20 @@ function safePath(value: string | undefined, fallback: string) {
   if (!value) return fallback;
   return value.startsWith("/") ? value : fallback;
 }
+
+type StaffCustomerLoyaltyActionResult =
+  | {
+      ok: true;
+      customerId: string;
+      currentStampCount: number;
+      lifetimeStampCount: number;
+      availableFreeDrinks: number;
+      message: string;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
 
 export async function registerCustomerAction(formData: FormData) {
   const payload = customerRegisterSchema.safeParse({
@@ -755,6 +779,201 @@ export async function adjustLoyaltyAction(formData: FormData) {
   revalidatePath("/app");
   revalidatePath("/rewards");
   redirect(safePath(payload.data.returnTo, `/staff/customers/${customer.id}`));
+}
+
+export async function quickAddCustomerStampsAction(input: {
+  customerId: string;
+  delta: 1 | 2;
+}): Promise<StaffCustomerLoyaltyActionResult> {
+  await requireStaffSession();
+  const payload = quickStampSchema.safeParse(input);
+
+  if (!payload.success) {
+    return { ok: false, error: "BAD_FORM" };
+  }
+
+  const customer = await prisma.customerProfile.findUnique({
+    where: { id: payload.data.customerId },
+    include: {
+      loyaltyAccount: true,
+    },
+  });
+
+  if (!customer) {
+    return { ok: false, error: "NOT_FOUND" };
+  }
+
+  const current = customer.loyaltyAccount ?? {
+    currentStampCount: 0,
+    lifetimeStampCount: 0,
+    availableFreeDrinks: 0,
+  };
+
+  const loyaltyResult = applyLoyaltyPurchase({
+    currentStampCount: current.currentStampCount,
+    lifetimeStampCount: current.lifetimeStampCount,
+    availableFreeDrinks: current.availableFreeDrinks,
+    stampsEarned: payload.data.delta,
+  });
+
+  await prisma.$transaction(async (tx) => {
+    if (customer.loyaltyAccount) {
+      await tx.loyaltyAccount.update({
+        where: { customerId: customer.id },
+        data: {
+          currentStampCount: loyaltyResult.currentStampCount,
+          lifetimeStampCount: loyaltyResult.lifetimeStampCount,
+          availableFreeDrinks: loyaltyResult.availableFreeDrinks,
+        },
+      });
+    } else {
+      await tx.loyaltyAccount.create({
+        data: {
+          customerId: customer.id,
+          currentStampCount: loyaltyResult.currentStampCount,
+          lifetimeStampCount: loyaltyResult.lifetimeStampCount,
+          availableFreeDrinks: loyaltyResult.availableFreeDrinks,
+        },
+      });
+    }
+
+    await tx.loyaltyStampEvent.create({
+      data: {
+        customerId: customer.id,
+        orderId: null,
+        type: "ADJUSTED",
+        stampDelta: payload.data.delta,
+        notes: `Ajustement rapide staff (+${payload.data.delta})`,
+      },
+    });
+
+    if (loyaltyResult.rewardsCreated > 0) {
+      for (let index = 0; index < loyaltyResult.rewardsCreated; index += 1) {
+        await tx.reward.create({
+          data: {
+            customerId: customer.id,
+            type: "FREE_DRINK",
+            status: "AVAILABLE",
+          },
+        });
+      }
+    }
+  });
+
+  revalidatePath("/staff/customers");
+  revalidatePath(`/staff/customers/${customer.id}`);
+  revalidatePath("/staff/loyalty");
+  revalidatePath("/app");
+  revalidatePath("/rewards");
+  revalidatePath("/account");
+
+  return {
+    ok: true,
+    customerId: customer.id,
+    currentStampCount: loyaltyResult.currentStampCount,
+    lifetimeStampCount: loyaltyResult.lifetimeStampCount,
+    availableFreeDrinks: loyaltyResult.availableFreeDrinks,
+    message: `+${payload.data.delta} tampon${payload.data.delta > 1 ? "s" : ""} ajouté${payload.data.delta > 1 ? "s" : ""}.`,
+  };
+}
+
+export async function quickRedeemCustomerRewardAction(input: {
+  customerId: string;
+}): Promise<StaffCustomerLoyaltyActionResult> {
+  await requireStaffSession();
+  const payload = quickRewardSchema.safeParse(input);
+
+  if (!payload.success) {
+    return { ok: false, error: "BAD_FORM" };
+  }
+
+  const customer = await prisma.customerProfile.findUnique({
+    where: { id: payload.data.customerId },
+    include: {
+      loyaltyAccount: true,
+    },
+  });
+
+  if (!customer) {
+    return { ok: false, error: "NOT_FOUND" };
+  }
+
+  const reward = await prisma.reward.findFirst({
+    where: {
+      customerId: customer.id,
+      status: "AVAILABLE",
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  if (!reward) {
+    return { ok: false, error: "NO_REWARD" };
+  }
+
+  const current = customer.loyaltyAccount ?? {
+    currentStampCount: 0,
+    lifetimeStampCount: 0,
+    availableFreeDrinks: 0,
+  };
+
+  const nextState = redeemRewardState(current);
+  if (!nextState) {
+    return { ok: false, error: "NO_REWARD" };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.reward.update({
+      where: { id: reward.id },
+      data: {
+        status: "REDEEMED",
+        redeemedAt: new Date(),
+      },
+    });
+
+    if (customer.loyaltyAccount) {
+      await tx.loyaltyAccount.update({
+        where: { customerId: customer.id },
+        data: {
+          availableFreeDrinks: nextState.availableFreeDrinks,
+        },
+      });
+    } else {
+      await tx.loyaltyAccount.create({
+        data: {
+          customerId: customer.id,
+          currentStampCount: nextState.currentStampCount,
+          lifetimeStampCount: nextState.lifetimeStampCount,
+          availableFreeDrinks: nextState.availableFreeDrinks,
+        },
+      });
+    }
+
+    await tx.loyaltyStampEvent.create({
+      data: {
+        customerId: customer.id,
+        orderId: reward.sourceOrderId,
+        type: "REDEEMED",
+        stampDelta: 0,
+        notes: "Boisson offerte utilisée au comptoir",
+      },
+    });
+  });
+
+  revalidatePath("/staff/customers");
+  revalidatePath(`/staff/customers/${customer.id}`);
+  revalidatePath("/staff/loyalty");
+  revalidatePath("/app");
+  revalidatePath("/rewards");
+  revalidatePath("/account");
+
+  return {
+    ok: true,
+    customerId: customer.id,
+    currentStampCount: nextState.currentStampCount,
+    lifetimeStampCount: nextState.lifetimeStampCount,
+    availableFreeDrinks: nextState.availableFreeDrinks,
+    message: "Récompense utilisée.",
+  };
 }
 
 export async function redeemRewardAction(formData: FormData) {

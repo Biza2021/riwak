@@ -2,12 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { StaffTopNav } from "@/components/navigation";
+import { SubmitButton } from "@/components/submit-button";
 import {
   Screen,
   Card,
   SectionHeader,
   Badge,
-  PrimaryButton,
   SecondaryButton,
 } from "@/components/ui";
 import { fr } from "@/content/fr";
@@ -48,7 +48,7 @@ export default async function StaffOrderDetailPage({
 
   return (
     <>
-      <Screen className="pb-24">
+      <Screen className="pb-40">
         <div className="space-y-5">
           <SectionHeader
             eyebrow={fr.staff.detailTitle}
@@ -172,9 +172,9 @@ export default async function StaffOrderDetailPage({
                   <input type="hidden" name="orderId" value={order.id} />
                   <input type="hidden" name="status" value={status} />
                   <input type="hidden" name="returnTo" value={`/staff/orders/${order.id}`} />
-                  <PrimaryButton type="submit" className="w-full">
+                  <SubmitButton className="w-full">
                     {orderStatusLabel(status)}
-                  </PrimaryButton>
+                  </SubmitButton>
                 </form>
               ))}
             </div>

@@ -215,6 +215,9 @@ async function main() {
   await prisma.customerProfile.deleteMany();
   await prisma.user.deleteMany();
   await prisma.storeSettings.deleteMany();
+  await prisma.$executeRawUnsafe(
+    'ALTER SEQUENCE "CustomerProfile_memberId_seq" RESTART WITH 1',
+  );
 
   await prisma.storeSettings.create({
     data: {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { Badge, Card } from "./ui";
+import { Badge } from "./ui";
 
 type NavItem = {
   href: string;
@@ -10,21 +10,23 @@ type NavItem = {
 
 export function CustomerBottomNav({ items }: { items: NavItem[] }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-[#e5d4bf] bg-[#fbf7f0]/95 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-2 backdrop-blur">
-      <div className="mx-auto grid max-w-md grid-cols-4 gap-2">
-        {items.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`rounded-2xl px-2 py-2 text-center text-[0.78rem] font-semibold transition ${
-              item.active
-                ? "bg-[#8c6239] text-white"
-                : "bg-white text-[#5c4637] shadow-sm"
-            }`}
-          >
-            {item.label}
-          </Link>
-        ))}
+    <nav className="fixed inset-x-0 bottom-3 z-30 px-3 pb-[env(safe-area-inset-bottom)]">
+      <div className="mx-auto max-w-md rounded-[1.65rem] border border-[#e5d4bf] bg-[#fbf7f0]/96 p-2 shadow-[0_18px_40px_rgba(66,45,27,0.16)] backdrop-blur">
+        <div className="grid grid-cols-4 gap-2">
+          {items.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex min-h-14 items-center justify-center rounded-2xl px-2 py-3 text-center text-[0.82rem] font-semibold transition ${
+                item.active
+                  ? "bg-[#8c6239] text-white shadow-[0_10px_24px_rgba(140,98,57,0.28)]"
+                  : "bg-white text-[#5c4637] shadow-sm"
+              }`}
+            >
+              <span className="block whitespace-nowrap">{item.label}</span>
+            </Link>
+          ))}
+        </div>
       </div>
     </nav>
   );
@@ -32,23 +34,25 @@ export function CustomerBottomNav({ items }: { items: NavItem[] }) {
 
 export function StaffTopNav({ items }: { items: NavItem[] }) {
   return (
-    <Card className="sticky top-3 z-20 mb-4 p-2">
-      <div className="grid grid-cols-4 gap-2">
-        {items.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`rounded-2xl px-3 py-3 text-center text-sm font-semibold transition ${
-              item.active
-                ? "bg-[#2d1b12] text-white"
-                : "bg-[#f3eadf] text-[#53402e]"
-            }`}
-          >
-            {item.label}
-          </Link>
-        ))}
+    <nav className="fixed inset-x-0 bottom-3 z-30 px-3 pb-[env(safe-area-inset-bottom)]">
+      <div className="mx-auto max-w-md rounded-[1.65rem] border border-[#d8c4ad] bg-[#fff8ef]/96 p-2 shadow-[0_18px_40px_rgba(45,27,18,0.18)] backdrop-blur">
+        <div className="grid grid-cols-4 gap-2">
+          {items.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex min-h-14 items-center justify-center rounded-2xl px-3 py-3 text-center text-sm font-semibold transition ${
+                item.active
+                  ? "bg-[#2d1b12] text-white shadow-[0_10px_24px_rgba(45,27,18,0.28)]"
+                  : "bg-[#f3eadf] text-[#53402e]"
+              }`}
+            >
+              <span className="block whitespace-nowrap">{item.label}</span>
+            </Link>
+          ))}
+        </div>
       </div>
-    </Card>
+    </nav>
   );
 }
 

@@ -1,7 +1,8 @@
 import Link from "next/link";
 
 import { CustomerBottomNav } from "@/components/navigation";
-import { Screen, Card, SectionHeader, Badge, MetricCard, EmptyState, PrimaryButton, SecondaryButton } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
+import { Screen, Card, SectionHeader, Badge, MetricCard, EmptyState, SecondaryButton } from "@/components/ui";
 import { fr } from "@/content/fr";
 import { getCustomerRewardsData } from "@/lib/queries";
 import { requireCustomerSession } from "@/lib/session";
@@ -104,9 +105,9 @@ export default async function RewardsPage() {
                           name="returnTo"
                           value={`/rewards/${reward.id}`}
                         />
-                        <PrimaryButton type="submit" className="w-full">
+                        <SubmitButton className="w-full">
                           {fr.actions.redeem}
-                        </PrimaryButton>
+                        </SubmitButton>
                       </form>
                     </div>
                   </div>

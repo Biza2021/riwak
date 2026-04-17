@@ -2,12 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { StaffTopNav } from "@/components/navigation";
+import { SubmitButton } from "@/components/submit-button";
 import {
   Screen,
   Card,
   SectionHeader,
   Badge,
-  PrimaryButton,
   SecondaryButton,
   TextField,
   TextAreaField,
@@ -19,7 +19,7 @@ import { fr } from "@/content/fr";
 import { adjustLoyaltyAction, updateTrustAction } from "@/lib/actions";
 import { getStaffCustomerDetail } from "@/lib/queries";
 import { requireStaffSession } from "@/lib/session";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatMemberId } from "@/lib/format";
 import { customerTypeLabel, customerTypeTone, orderStatusLabel, orderStatusTone } from "@/lib/presentation";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +41,7 @@ export default async function StaffCustomerDetailPage({
 
   return (
     <>
-      <Screen className="pb-24">
+      <Screen className="pb-40">
         <div className="space-y-5">
           <SectionHeader
             eyebrow={fr.staff.customerTitle}
@@ -51,11 +51,19 @@ export default async function StaffCustomerDetailPage({
 
           <Card className="space-y-4 p-5">
             <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-[#8c6239]">{fr.common.loyaltyPin}</p>
-                <p className="mt-1 text-lg font-semibold text-[#2d1b12]">
-                  {customer.loyaltyPin}
-                </p>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-semibold text-[#8c6239]">{fr.common.memberId}</p>
+                  <p className="mt-1 text-lg font-semibold text-[#2d1b12]">
+                    {formatMemberId(customer.memberId)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#8c6239]">{fr.common.loyaltyPin}</p>
+                  <p className="mt-1 text-lg font-semibold text-[#2d1b12]">
+                    {customer.loyaltyPin}
+                  </p>
+                </div>
               </div>
               <Badge tone={customerTypeTone(customer.customerType)}>
                 {customerTypeLabel(customer.customerType)}
@@ -114,9 +122,9 @@ export default async function StaffCustomerDetailPage({
                 <FieldLabel>Durée de limitation (heures)</FieldLabel>
                 <TextField name="limitHours" type="number" min={1} max={720} defaultValue={72} />
               </div>
-              <PrimaryButton type="submit" className="w-full">
+              <SubmitButton className="w-full">
                 {fr.actions.save}
-              </PrimaryButton>
+              </SubmitButton>
             </form>
           </Card>
 
@@ -133,9 +141,9 @@ export default async function StaffCustomerDetailPage({
                 <FieldLabel>Raison</FieldLabel>
                 <TextAreaField name="reason" placeholder="Correction manuelle, geste commercial" />
               </div>
-              <PrimaryButton type="submit" className="w-full">
+              <SubmitButton className="w-full">
                 Appliquer
-              </PrimaryButton>
+              </SubmitButton>
             </form>
           </Card>
 

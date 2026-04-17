@@ -2,6 +2,8 @@ import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "rea
 
 import { cn } from "@/lib/utils";
 
+export type ButtonVariant = "primary" | "secondary";
+
 export function Screen({
   children,
   className,
@@ -12,7 +14,7 @@ export function Screen({
   return (
     <main
       className={cn(
-        "mx-auto flex min-h-dvh w-full max-w-3xl flex-1 flex-col px-4 pb-28 pt-5 sm:px-6",
+        "mx-auto flex min-h-dvh w-full max-w-3xl flex-1 flex-col px-4 pb-40 pt-5 sm:px-6",
         className,
       )}
     >
@@ -107,10 +109,7 @@ export function PrimaryButton({
   return (
     <button
       {...props}
-      className={cn(
-        "inline-flex min-h-12 items-center justify-center rounded-full bg-[#8c6239] px-4 text-sm font-semibold text-white shadow-sm transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60",
-        className,
-      )}
+      className={buttonClassName("primary", className)}
     >
       {children}
     </button>
@@ -125,14 +124,22 @@ export function SecondaryButton({
   return (
     <button
       {...props}
-      className={cn(
-        "inline-flex min-h-12 items-center justify-center rounded-full border border-[#d7c0a7] bg-white px-4 text-sm font-semibold text-[#4a3323] transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60",
-        className,
-      )}
+      className={buttonClassName("secondary", className)}
     >
       {children}
     </button>
   );
+}
+
+export function buttonClassName(variant: ButtonVariant, className?: string) {
+  const styles: Record<ButtonVariant, string> = {
+    primary:
+      "inline-flex min-h-12 appearance-none select-none items-center justify-center rounded-full bg-[#8c6239] px-4 text-sm font-semibold text-white shadow-sm outline-none transition [webkit-tap-highlight-color:transparent] active:scale-[0.99] active:bg-[#76502d] focus-visible:ring-2 focus-visible:ring-[#d8b36f]/30 disabled:cursor-not-allowed disabled:bg-[#8c6239] disabled:text-white disabled:opacity-70 disabled:shadow-none",
+    secondary:
+      "inline-flex min-h-12 appearance-none select-none items-center justify-center rounded-full border border-[#d7c0a7] bg-white px-4 text-sm font-semibold text-[#4a3323] shadow-sm outline-none transition [webkit-tap-highlight-color:transparent] active:scale-[0.99] active:bg-[#f3eadf] focus-visible:ring-2 focus-visible:ring-[#d8b36f]/30 disabled:cursor-not-allowed disabled:border-[#d7c0a7] disabled:bg-white disabled:text-[#4a3323] disabled:opacity-70 disabled:shadow-none",
+  };
+
+  return cn(styles[variant], className);
 }
 
 export function TextField({

@@ -1,12 +1,13 @@
 import Link from "next/link";
 
 import { CustomerBottomNav } from "@/components/navigation";
-import { Screen, Card, SectionHeader, Badge, SecondaryButton, Notice } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
+import { Screen, Card, SectionHeader, Badge, Notice } from "@/components/ui";
 import { fr } from "@/content/fr";
 import { logoutAction } from "@/lib/actions";
 import { requireCustomerSession } from "@/lib/session";
 import { customerTypeLabel, customerTypeTone } from "@/lib/presentation";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatMemberId } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -42,13 +43,21 @@ export default async function AccountPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl bg-[#f8f1e7] px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8b6b4c]">
-                  PIN
+                  {fr.common.memberId}
+                </p>
+                <p className="mt-2 text-xl font-semibold text-[#2d1b12]">
+                  {formatMemberId(customer.memberId)}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-[#f8f1e7] px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8b6b4c]">
+                  {fr.common.loyaltyPin}
                 </p>
                 <p className="mt-2 text-xl font-semibold text-[#2d1b12]">
                   {customer.loyaltyPin}
                 </p>
               </div>
-              <div className="rounded-2xl bg-[#f8f1e7] px-4 py-3">
+              <div className="rounded-2xl bg-[#f8f1e7] px-4 py-3 col-span-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8b6b4c]">
                   {fr.home.trustCardTitle}
                 </p>
@@ -57,6 +66,8 @@ export default async function AccountPage() {
                 </p>
               </div>
             </div>
+
+            <Notice tone="blue">{fr.account.memberIdBody}</Notice>
 
             {customer.trustReason ? (
               <Notice tone={customer.customerType === "LIMITED" ? "red" : "blue"}>
@@ -69,9 +80,9 @@ export default async function AccountPage() {
             </p>
 
             <form action={logoutAction}>
-              <SecondaryButton type="submit" className="w-full">
+              <SubmitButton variant="secondary" className="w-full">
                 {fr.actions.logout}
-              </SecondaryButton>
+              </SubmitButton>
             </form>
           </Card>
 

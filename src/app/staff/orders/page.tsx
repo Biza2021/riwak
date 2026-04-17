@@ -23,7 +23,7 @@ export default async function StaffOrdersPage({
 
   return (
     <>
-      <Screen className="pb-24">
+      <Screen className="pb-40">
         <StaffOrdersLive
           initialData={initialData}
           status={status}

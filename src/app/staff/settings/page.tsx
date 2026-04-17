@@ -3,14 +3,13 @@ import {
   Card,
   SectionHeader,
   Badge,
-  PrimaryButton,
-  SecondaryButton,
   TextField,
   TextAreaField,
   FieldLabel,
   Notice,
 } from "@/components/ui";
 import { StaffTopNav } from "@/components/navigation";
+import { SubmitButton } from "@/components/submit-button";
 import { fr } from "@/content/fr";
 import { getSettingsPanelData } from "@/lib/queries";
 import { requireStaffSession } from "@/lib/session";
@@ -37,7 +36,7 @@ export default async function StaffSettingsPage({
 
   return (
     <>
-      <Screen className="pb-24">
+      <Screen className="pb-40">
         <div className="space-y-5">
           <SectionHeader
             eyebrow={fr.settings.title}
@@ -106,9 +105,9 @@ export default async function StaffSettingsPage({
                   Clients de confiance
                 </label>
               </div>
-              <PrimaryButton type="submit" className="w-full">
+              <SubmitButton className="w-full">
                 {fr.actions.save}
-              </PrimaryButton>
+              </SubmitButton>
             </form>
           </Card>
 
@@ -160,9 +159,9 @@ export default async function StaffSettingsPage({
                   Notes requises
                 </label>
               </div>
-              <PrimaryButton type="submit" className="w-full">
+              <SubmitButton className="w-full">
                 {fr.actions.add}
-              </PrimaryButton>
+              </SubmitButton>
             </form>
 
             <div className="space-y-4">
@@ -241,17 +240,17 @@ export default async function StaffSettingsPage({
                         Notes requises
                       </label>
                     </div>
-                    <PrimaryButton type="submit" className="w-full">
+                    <SubmitButton className="w-full">
                       {fr.actions.save}
-                    </PrimaryButton>
+                    </SubmitButton>
                   </form>
 
                   <form action={toggleMenuItemAction}>
                     <input type="hidden" name="id" value={item.id} />
                     <input type="hidden" name="isActive" value={String(!item.isActive)} />
-                    <SecondaryButton type="submit" className="w-full">
+                    <SubmitButton variant="secondary" className="w-full">
                       {item.isActive ? "Masquer" : "Réactiver"}
-                    </SecondaryButton>
+                    </SubmitButton>
                   </form>
                 </Card>
               ))}

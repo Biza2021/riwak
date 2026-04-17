@@ -20,7 +20,7 @@ export default async function StaffLoyaltyPage() {
 
   return (
     <>
-      <Screen className="pb-24">
+      <Screen className="pb-40">
         <div className="space-y-5">
           <SectionHeader
             eyebrow={fr.staff.loyaltyTitle}

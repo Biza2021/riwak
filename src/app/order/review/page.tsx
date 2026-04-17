@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { CustomerBottomNav } from "@/components/navigation";
+import { SubmitButton } from "@/components/submit-button";
 import { VoiceNoteField } from "@/components/voice-note-field";
 import {
   Screen,
@@ -9,7 +10,6 @@ import {
   SectionHeader,
   TextField,
   TextAreaField,
-  PrimaryButton,
   SecondaryButton,
   Badge,
   Notice,
@@ -203,9 +203,9 @@ export default async function OrderReviewPage({
                 <p>{fr.common.sugar}: {sugarCount}</p>
               </div>
 
-              <PrimaryButton type="submit" className="w-full">
+              <SubmitButton className="w-full">
                 {fr.actions.confirm}
-              </PrimaryButton>
+              </SubmitButton>
             </form>
           </Card>
 

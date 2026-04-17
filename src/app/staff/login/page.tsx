@@ -1,12 +1,12 @@
 import Link from "next/link";
 
+import { SubmitButton } from "@/components/submit-button";
 import {
   Screen,
   Card,
   SectionHeader,
   TextField,
   FieldLabel,
-  PrimaryButton,
   SecondaryButton,
   Notice,
 } from "@/components/ui";
@@ -58,9 +58,9 @@ export default async function StaffLoginPage({
                 required
               />
             </div>
-            <PrimaryButton type="submit" className="w-full">
+            <SubmitButton className="w-full">
               {fr.actions.login}
-            </PrimaryButton>
+            </SubmitButton>
           </form>
         </Card>
 

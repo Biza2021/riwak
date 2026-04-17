@@ -11,6 +11,7 @@ export const fr = {
     logout: "Se déconnecter",
     orderNow: "Commander maintenant",
     viewOrder: "Voir la commande",
+    viewProfile: "Fiche",
     addToHome: "Ajouter à l’écran d’accueil",
     dismiss: "Plus tard",
     redeem: "Utiliser",
@@ -29,6 +30,9 @@ export const fr = {
     quickReorder: "Recommander",
     markTrusted: "Marquer comme régulier",
     markLimited: "Limiter",
+    useReward: "Utiliser récompense",
+    addOneStamp: "+1 tampon",
+    addTwoStamps: "+2 tampons",
   },
   common: {
     loading: "Chargement…",
@@ -47,6 +51,7 @@ export const fr = {
     phoneNumber: "Numéro de téléphone",
     fullName: "Nom complet",
     loyaltyPin: "PIN fidélité",
+    memberId: "ID membre",
     password: "Mot de passe",
     email: "E-mail",
     price: "Prix",
@@ -153,6 +158,7 @@ export const fr = {
     title: "Compte",
     subtitle: "Informations rapides pour un retour sans friction.",
     logoutBody: "Déconnectez-vous seulement si nécessaire.",
+    memberIdBody: "Partagez cet ID membre au barista pour retrouver votre compte plus vite.",
   },
   history: {
     title: "Historique",
@@ -171,6 +177,11 @@ export const fr = {
     filtersTitle: "Filtres",
     incomingLabel: "Nouvelle",
     activeUnpaidLabel: "Commande impayée active",
+    customerSearchTitle: "Rechercher un client",
+    customerSearchEmpty: "Aucun client ne correspond à cette recherche.",
+    quickStampAdded: (count: number) =>
+      count === 1 ? "+1 tampon ajouté." : `+${count} tampons ajoutés.`,
+    rewardRedeemed: "Récompense utilisée.",
   },
   forms: {
     phonePlaceholder: "06 12 34 56 78",
@@ -183,6 +194,7 @@ export const fr = {
     addressPlaceholder: "Adresse de retrait",
     pricePlaceholder: "Prix",
     displayOrderPlaceholder: "Ordre d’affichage",
+    customerSearchPlaceholder: "ID membre, téléphone ou nom",
   },
   statuses: {
     received: "Reçue",
@@ -218,6 +230,7 @@ export const fr = {
     customers: "Aucun client pour le moment.",
     rewards: "Aucune récompense pour le moment.",
     history: "Aucun historique pour le moment.",
+    noOrderYet: "Pas encore de commande.",
   },
   install: {
     title: "Ajouter à l’écran d’accueil",

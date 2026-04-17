@@ -9,6 +9,17 @@ export function formatCurrency(amount: number | string | { toString(): string })
   }).format(Number.isFinite(numeric) ? numeric : 0);
 }
 
+export function formatMemberId(memberId: number | string) {
+  const numeric =
+    typeof memberId === "number" ? memberId : Number.parseInt(memberId, 10);
+
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return "#0000";
+  }
+
+  return `#${String(Math.trunc(numeric)).padStart(4, "0")}`;
+}
+
 export function formatDateTime(value: Date | string) {
   const date = value instanceof Date ? value : new Date(value);
 
