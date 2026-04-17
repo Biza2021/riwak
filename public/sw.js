@@ -1,12 +1,15 @@
-const CACHE_NAME = "riwak-v5";
+const CACHE_NAME = "riwak-v6";
 const CORE_URLS = [
   "/",
   "/register",
   "/staff/login",
   "/offline",
   "/manifest.webmanifest",
-  "/icon",
-  "/apple-icon",
+  "/favicon.ico",
+  "/icon.png",
+  "/apple-icon.png",
+  "/pwa/riwak-192.png",
+  "/pwa/riwak-512.png",
 ];
 
 const DYNAMIC_BYPASS_PREFIXES = [

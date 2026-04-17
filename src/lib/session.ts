@@ -7,6 +7,7 @@ import { prisma } from "./db";
 
 const SESSION_COOKIE = "riwak_session";
 const SESSION_TTL_DAYS = 60;
+const SESSION_TOUCH_INTERVAL_MS = 15 * 60 * 1000;
 
 export function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
@@ -70,15 +71,34 @@ export async function getCurrentSession(options?: { touch?: boolean }) {
         gt: new Date(),
       },
     },
-    include: {
+    select: {
+      id: true,
+      lastSeenAt: true,
       user: {
-        include: {
+        select: {
+          id: true,
           customerProfile: {
-            include: {
-              loyaltyAccount: true,
+            select: {
+              id: true,
+              memberId: true,
+              fullName: true,
+              phoneNumber: true,
+              loyaltyPin: true,
+              customerType: true,
+              trustReason: true,
+              limitedUntil: true,
+              trustedUntil: true,
+              createdAt: true,
             },
           },
-          staffUser: true,
+          staffUser: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              active: true,
+            },
+          },
         },
       },
     },
@@ -88,7 +108,10 @@ export async function getCurrentSession(options?: { touch?: boolean }) {
     return null;
   }
 
-  if (options?.touch !== false) {
+  if (
+    options?.touch !== false &&
+    Date.now() - session.lastSeenAt.getTime() >= SESSION_TOUCH_INTERVAL_MS
+  ) {
     await prisma.authSession.update({
       where: { id: session.id },
       data: { lastSeenAt: new Date() },
@@ -109,7 +132,7 @@ export async function requireCustomerSession() {
 
 export async function requireStaffSession() {
   const session = await getCurrentSession();
-  if (!session?.user.staffUser) {
+  if (!session?.user.staffUser?.active) {
     redirect("/staff/login");
   }
 

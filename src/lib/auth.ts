@@ -1,4 +1,4 @@
-import { randomInt, randomUUID } from "node:crypto";
+import { randomInt } from "node:crypto";
 
 import bcrypt from "bcryptjs";
 
@@ -12,27 +12,11 @@ export async function verifySecret(secret: string, hash: string) {
   return bcrypt.compare(secret, hash);
 }
 
-export function generateSessionToken() {
-  return randomUUID().replace(/-/g, "");
-}
-
-export function hashSessionToken(token: string) {
-  return bcrypt.hashSync(token, 1);
-}
-
-export function createSessionTokenHash(token: string) {
-  return bcrypt.hashSync(token, 1);
-}
-
-export function sha256(input: string) {
-  return Buffer.from(input).toString("base64url");
-}
-
 export function normalizeCustomerPhone(input: string) {
   return normalizePhoneNumber(input);
 }
 
-export function generateLoyaltyPin(existingPins: Iterable<string>) {
+export function generateLoyaltyPin(existingPins: Iterable<string> = []) {
   const taken = new Set(existingPins);
 
   for (let attempts = 0; attempts < 1000; attempts += 1) {
@@ -47,16 +31,4 @@ export function generateLoyaltyPin(existingPins: Iterable<string>) {
 
 export function normalizeStaffEmail(email: string) {
   return email.trim().toLowerCase();
-}
-
-export function generateTempPassword(length = 12) {
-  const alphabet =
-    "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-  let value = "";
-
-  for (let index = 0; index < length; index += 1) {
-    value += alphabet[randomInt(0, alphabet.length)];
-  }
-
-  return value;
 }

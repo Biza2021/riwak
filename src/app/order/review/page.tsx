@@ -41,7 +41,7 @@ export default async function OrderReviewPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireCustomerSession();
+  const session = await requireCustomerSession();
   const params = (await searchParams) ?? {};
   const error = getErrorMessage(params.error);
   const repeatFrom = readParam(params, "repeatFrom");
@@ -65,15 +65,21 @@ export default async function OrderReviewPage({
 
   if (!menuItemId && repeatFrom) {
     const repeatedOrder = await getOrderById(repeatFrom);
-    const firstItem = repeatedOrder?.orderItems[0];
-    if (firstItem) {
+    if (
+      repeatedOrder &&
+      repeatedOrder.customerId === session.user.customerProfile?.id
+    ) {
+      const firstItem = repeatedOrder.orderItems[0];
+      if (!firstItem) {
+        redirect("/menu");
+      }
+
       menuItemId = firstItem.menuItemId;
       quantity = firstItem.quantity;
-      sugarCount =
-        repeatedOrder && isValidSugarCount(repeatedOrder.sugarCount)
-          ? repeatedOrder.sugarCount
-          : 0;
-      notes = firstItem.notes ?? repeatedOrder?.notes ?? "";
+      sugarCount = isValidSugarCount(repeatedOrder.sugarCount)
+        ? repeatedOrder.sugarCount
+        : 0;
+      notes = firstItem.notes ?? repeatedOrder.notes ?? "";
     }
   }
 

@@ -159,9 +159,41 @@ The menu is stored in the database so the admin screen can add, hide, rename, or
 
 - installable as a PWA
 - manifest configured
-- icons provided through Next metadata routes
+- icons provided through static App Router icon files and PWA manifest assets
 - visible add-to-home-screen nudge
 - basic offline page and service worker
+- live operational routes and API endpoints bypass the offline cache to avoid stale queue/status data
+
+## Railway Deployment
+
+Recommended production flow:
+
+1. Set `DATABASE_URL` in Railway
+2. Build with:
+
+```bash
+npm run prisma:generate
+npm run build
+```
+
+3. Before starting a new release, run migrations:
+
+```bash
+npx prisma migrate deploy
+```
+
+4. Start the app with:
+
+```bash
+npm run start
+```
+
+Notes:
+
+- `next start` is sufficient for Railway with the current setup
+- Prisma migrations are committed in `prisma/migrations`
+- the app expects PostgreSQL in production
+- service worker cache versions are bumped when icon or offline-shell assets change
 
 ## Business Logic Notes
 
@@ -202,4 +234,3 @@ If you expand this MVP later, the next likely steps are:
 - live socket updates for staff
 - Arabic and English translations
 - richer admin analytics
-

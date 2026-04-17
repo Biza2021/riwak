@@ -164,6 +164,8 @@ model Order {
   updatedAt            DateTime      @updatedAt
 
   @@index([customerId, status])
+  @@index([customerId, status, expiresAt])
+  @@index([status, expiresAt])
   @@index([status, placedAt])
 }
 

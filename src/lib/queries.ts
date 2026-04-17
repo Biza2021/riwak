@@ -6,9 +6,11 @@ import {
   displayCustomerType,
   isActiveOrderStatus,
 } from "./domain";
-import { formatCurrency } from "./format";
 
 const activeStatuses = ["RECEIVED", "ACCEPTED", "PREPARING", "READY"] as const;
+const EXPIRY_SWEEP_INTERVAL_MS = 15_000;
+
+let lastExpirySweepAt = 0;
 
 export async function ensureStoreSettings() {
   const existing = await prisma.storeSettings.findFirst();
@@ -29,8 +31,17 @@ export async function ensureStoreSettings() {
   });
 }
 
-export async function expireOverdueOrders() {
+export async function expireOverdueOrders(options?: { force?: boolean }) {
   const now = new Date();
+
+  if (!options?.force) {
+    const nowMs = now.getTime();
+    if (nowMs - lastExpirySweepAt < EXPIRY_SWEEP_INTERVAL_MS) {
+      return { count: 0 };
+    }
+
+    lastExpirySweepAt = nowMs;
+  }
 
   return prisma.order.updateMany({
     where: {
@@ -93,30 +104,53 @@ export async function getCustomerById(customerId: string) {
 
 export async function getCustomerHomeData(customerId: string) {
   await expireOverdueOrders();
-  const settings = await ensureStoreSettings();
 
   const customer = await prisma.customerProfile.findUnique({
     where: { id: customerId },
-    include: {
-      user: true,
-      loyaltyAccount: true,
-      rewards: {
-        orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      fullName: true,
+      loyaltyPin: true,
+      customerType: true,
+      limitedUntil: true,
+      trustedUntil: true,
+      loyaltyAccount: {
+        select: {
+          currentStampCount: true,
+          lifetimeStampCount: true,
+          availableFreeDrinks: true,
+        },
       },
-      trustEvents: {
-        orderBy: { createdAt: "desc" },
-        take: 5,
-        include: {
-          staffUser: true,
+      rewards: {
+        where: {
+          status: "AVAILABLE",
+        },
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        select: {
+          id: true,
+          status: true,
+          createdAt: true,
         },
       },
       orders: {
         orderBy: { placedAt: "desc" },
         take: 12,
-        include: {
+        select: {
+          id: true,
+          status: true,
+          pickupTime: true,
+          expiresAt: true,
+          placedAt: true,
           orderItems: {
-            include: {
-              menuItem: true,
+            select: {
+              id: true,
+              quantity: true,
+              menuItem: {
+                select: {
+                  name: true,
+                },
+              },
             },
           },
         },
@@ -125,7 +159,7 @@ export async function getCustomerHomeData(customerId: string) {
   });
 
   if (!customer) {
-    return { settings, customer: null };
+    return { customer: null };
   }
 
   const activeOrder = customer.orders.find((order) =>
@@ -149,7 +183,6 @@ export async function getCustomerHomeData(customerId: string) {
   });
 
   return {
-    settings,
     customer: {
       ...customer,
       customerType,
@@ -168,13 +201,24 @@ export async function getCustomerOrdersData(customerId: string) {
   await expireOverdueOrders();
   return prisma.customerProfile.findUnique({
     where: { id: customerId },
-    include: {
+    select: {
+      id: true,
       orders: {
         orderBy: { placedAt: "desc" },
-        include: {
+        select: {
+          id: true,
+          status: true,
+          placedAt: true,
+          pickupTime: true,
           orderItems: {
-            include: {
-              menuItem: true,
+            select: {
+              id: true,
+              quantity: true,
+              menuItem: {
+                select: {
+                  name: true,
+                },
+              },
             },
           },
         },
@@ -187,19 +231,52 @@ export async function getOrderById(orderId: string) {
   await expireOverdueOrders();
   return prisma.order.findUnique({
     where: { id: orderId },
-    include: {
+    select: {
+      id: true,
+      customerId: true,
+      status: true,
+      pickupTime: true,
+      placedAt: true,
+      expiresAt: true,
+      updatedAt: true,
+      totalAmount: true,
+      isPaidAtShop: true,
+      sugarCount: true,
+      notes: true,
+      voiceNoteDataUrl: true,
+      voiceNoteDurationSec: true,
       customer: {
-        include: {
-          loyaltyAccount: true,
-          user: true,
+        select: {
+          fullName: true,
+          phoneNumber: true,
+          customerType: true,
+          loyaltyAccount: {
+            select: {
+              currentStampCount: true,
+            },
+          },
         },
       },
       orderItems: {
-        include: {
-          menuItem: true,
+        select: {
+          id: true,
+          menuItemId: true,
+          quantity: true,
+          notes: true,
+          unitPrice: true,
+          menuItem: {
+            select: {
+              name: true,
+            },
+          },
         },
       },
-      rewards: true,
+      rewards: {
+        select: {
+          id: true,
+          status: true,
+        },
+      },
     },
   });
 }
@@ -230,24 +307,32 @@ export async function getCustomerRewardsData(customerId: string) {
   await expireOverdueOrders();
   const customer = await prisma.customerProfile.findUnique({
     where: { id: customerId },
-    include: {
+    select: {
+      id: true,
+      fullName: true,
+      phoneNumber: true,
+      loyaltyPin: true,
+      customerType: true,
+      limitedUntil: true,
+      trustedUntil: true,
       loyaltyAccount: true,
       rewards: {
         orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          status: true,
+          createdAt: true,
+        },
       },
       loyaltyEvents: {
         orderBy: { createdAt: "desc" },
         take: 20,
-        include: {
-          order: {
-            include: {
-              orderItems: {
-                include: {
-                  menuItem: true,
-                },
-              },
-            },
-          },
+        select: {
+          id: true,
+          type: true,
+          stampDelta: true,
+          notes: true,
+          createdAt: true,
         },
       },
     },
@@ -261,7 +346,6 @@ export async function getStaffQueueData(
   options?: { showDemo?: boolean },
 ) {
   await expireOverdueOrders();
-  const settings = await ensureStoreSettings();
   const scopedToSingleStatus = Boolean(statusFilter && statusFilter !== "ALL");
   const showDemo = options?.showDemo ?? false;
   const baseWhere: Prisma.OrderWhereInput = showDemo
@@ -285,15 +369,35 @@ export async function getStaffQueueData(
   const orders = await prisma.order.findMany({
     where: ordersWhere,
     orderBy: [{ placedAt: "desc" }, { createdAt: "desc" }],
-    include: {
+    select: {
+      id: true,
+      status: true,
+      pickupTime: true,
+      placedAt: true,
+      createdAt: true,
+      expiresAt: true,
+      totalAmount: true,
       customer: {
-        include: {
-          loyaltyAccount: true,
+        select: {
+          fullName: true,
+          phoneNumber: true,
+          customerType: true,
+          loyaltyAccount: {
+            select: {
+              currentStampCount: true,
+            },
+          },
         },
       },
       orderItems: {
-        include: {
-          menuItem: true,
+        select: {
+          id: true,
+          quantity: true,
+          menuItem: {
+            select: {
+              name: true,
+            },
+          },
         },
       },
     },
@@ -301,23 +405,6 @@ export async function getStaffQueueData(
   const queueOrders = scopedToSingleStatus
     ? orders
     : [...orders].sort(compareStaffQueueOrders);
-
-  const allOrders = await prisma.order.findMany({
-    where: {
-      AND: [
-        baseWhere,
-        {
-          status: {
-            in: activeStatuses as unknown as OrderStatus[],
-          },
-        },
-      ],
-    },
-    select: {
-      status: true,
-      id: true,
-    },
-  });
 
   const counts = {
     RECEIVED: 0,
@@ -329,11 +416,38 @@ export async function getStaffQueueData(
     EXPIRED: 0,
   } as Record<string, number>;
 
-  for (const order of await prisma.order.findMany({
-    where: baseWhere,
-    select: { status: true },
-  })) {
-    counts[order.status] = (counts[order.status] ?? 0) + 1;
+  const [activeOrders, groupedCountsRaw] = await prisma.$transaction([
+    prisma.order.count({
+      where: {
+        AND: [
+          baseWhere,
+          {
+            status: {
+              in: activeStatuses as unknown as OrderStatus[],
+            },
+          },
+        ],
+      },
+    }),
+    prisma.order.groupBy({
+      by: ["status"],
+      where: baseWhere,
+      orderBy: {
+        status: "asc",
+      },
+      _count: {
+        status: true,
+      },
+    }),
+  ]);
+
+  const groupedCounts = groupedCountsRaw as Array<{
+    status: OrderStatus;
+    _count: { status: number };
+  }>;
+
+  for (const group of groupedCounts) {
+    counts[group.status] = group._count.status;
   }
 
   const totalRevenue = orders.reduce(
@@ -342,11 +456,10 @@ export async function getStaffQueueData(
   );
 
   return {
-    settings,
     orders: queueOrders,
     counts,
     totalRevenue,
-    activeOrders: allOrders.length,
+    activeOrders,
   };
 }
 
@@ -355,22 +468,22 @@ export async function getStaffCustomersData() {
 
   const customers = await prisma.customerProfile.findMany({
     orderBy: [{ updatedAt: "desc" }],
-    include: {
+    select: {
+      id: true,
+      memberId: true,
+      fullName: true,
+      phoneNumber: true,
+      customerType: true,
+      limitedUntil: true,
+      trustedUntil: true,
+      lastOrderAt: true,
       loyaltyAccount: true,
       orders: {
         orderBy: { placedAt: "desc" },
-        take: 3,
-        include: {
-          orderItems: {
-            include: {
-              menuItem: true,
-            },
-          },
-        },
-      },
-      trustEvents: {
-        orderBy: { createdAt: "desc" },
         take: 1,
+        select: {
+          placedAt: true,
+        },
       },
     },
   });
@@ -390,15 +503,31 @@ export async function getStaffCustomerDetail(customerId: string) {
 
   const customer = await prisma.customerProfile.findUnique({
     where: { id: customerId },
-    include: {
-      user: true,
+    select: {
+      id: true,
+      fullName: true,
+      phoneNumber: true,
+      memberId: true,
+      loyaltyPin: true,
+      customerType: true,
+      limitedUntil: true,
+      trustedUntil: true,
       loyaltyAccount: true,
       orders: {
         orderBy: { placedAt: "desc" },
-        include: {
+        select: {
+          id: true,
+          status: true,
+          placedAt: true,
           orderItems: {
-            include: {
-              menuItem: true,
+            select: {
+              id: true,
+              quantity: true,
+              menuItem: {
+                select: {
+                  name: true,
+                },
+              },
             },
           },
         },
@@ -406,25 +535,12 @@ export async function getStaffCustomerDetail(customerId: string) {
       loyaltyEvents: {
         orderBy: { createdAt: "desc" },
         take: 20,
-        include: {
-          order: {
-            include: {
-              orderItems: {
-                include: {
-                  menuItem: true,
-                },
-              },
-            },
-          },
-        },
-      },
-      rewards: {
-        orderBy: { createdAt: "desc" },
-      },
-      trustEvents: {
-        orderBy: { createdAt: "desc" },
-        include: {
-          staffUser: true,
+        select: {
+          id: true,
+          type: true,
+          stampDelta: true,
+          notes: true,
+          createdAt: true,
         },
       },
     },
@@ -449,41 +565,6 @@ export async function getStaffCustomerDetail(customerId: string) {
   };
 }
 
-export async function getStaffLoyaltyOverview() {
-  await expireOverdueOrders();
-
-  const accounts = await prisma.loyaltyAccount.findMany({
-    orderBy: [{ updatedAt: "desc" }],
-    include: {
-      customer: {
-        include: {
-          orders: {
-            orderBy: { placedAt: "desc" },
-            take: 2,
-            include: {
-              orderItems: {
-                include: {
-                  menuItem: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  });
-
-  const stats = await prisma.loyaltyStampEvent.groupBy({
-    by: ["type"],
-    _count: true,
-  });
-
-  return {
-    accounts,
-    stats,
-  };
-}
-
 export async function getSettingsPanelData() {
   await expireOverdueOrders();
   const settings = await ensureStoreSettings();
@@ -492,36 +573,4 @@ export async function getSettingsPanelData() {
   });
 
   return { settings, menuItems };
-}
-
-export async function getOrderQueueMetrics() {
-  const orders = await prisma.order.findMany({
-    select: {
-      status: true,
-      totalAmount: true,
-    },
-  });
-
-  const totals = {
-    RECEIVED: 0,
-    ACCEPTED: 0,
-    PREPARING: 0,
-    READY: 0,
-    PICKED_UP: 0,
-    CANCELLED: 0,
-    EXPIRED: 0,
-  } as Record<string, number>;
-
-  for (const order of orders) {
-    totals[order.status] = (totals[order.status] ?? 0) + 1;
-  }
-
-  return {
-    totals,
-    revenue: orders.reduce((sum, order) => sum + Number(order.totalAmount), 0),
-  };
-}
-
-export function getOrderTotalLabel(totalAmount: Prisma.Decimal | number | string) {
-  return formatCurrency(totalAmount);
 }

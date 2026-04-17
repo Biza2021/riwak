@@ -13,6 +13,7 @@ import {
   computeOrderExpiresAt,
   displayCustomerType,
   isValidSugarCount,
+  MAX_VOICE_NOTE_DATA_URL_LENGTH,
   MAX_VOICE_NOTE_SECONDS,
   normalizeVoiceNoteInput,
   redeemRewardState,
@@ -45,7 +46,12 @@ const createOrderSchema = z.object({
   pickupMinutes: z.coerce.number().int().refine((value) => [0, 10, 15, 20].includes(value)),
   sugarCount: z.coerce.number().int().refine(isValidSugarCount),
   notes: z.string().trim().max(200).optional().default(""),
-  voiceNoteDataUrl: z.string().trim().max(800_000).optional().default(""),
+  voiceNoteDataUrl: z
+    .string()
+    .trim()
+    .max(MAX_VOICE_NOTE_DATA_URL_LENGTH)
+    .optional()
+    .default(""),
   voiceNoteMimeType: z.string().trim().max(120).optional().default(""),
   voiceNoteDurationSec: z.coerce.number().int().min(1).max(MAX_VOICE_NOTE_SECONDS).optional(),
   returnTo: z.string().optional(),
@@ -135,6 +141,37 @@ function safePath(value: string | undefined, fallback: string) {
   return value.startsWith("/") ? value : fallback;
 }
 
+function isUniqueConstraintError(error: unknown, field?: string) {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+    return false;
+  }
+
+  if (error.code !== "P2002") {
+    return false;
+  }
+
+  if (!field) {
+    return true;
+  }
+
+  const targets = Array.isArray(error.meta?.target) ? error.meta.target : [];
+  return targets.includes(field);
+}
+
+function isSerializableTransactionConflict(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2034"
+  );
+}
+
+class ActionConflictError extends Error {
+  constructor(readonly code: string) {
+    super(code);
+    this.name = "ActionConflictError";
+  }
+}
+
 type StaffCustomerLoyaltyActionResult =
   | {
       ok: true;
@@ -174,37 +211,54 @@ export async function registerCustomerAction(formData: FormData) {
     redirectWithError("/register", "PHONE_EXISTS");
   }
 
-  const existingPins = await prisma.customerProfile.findMany({
-    select: { loyaltyPin: true },
-  });
+  let userId: string | null = null;
 
-  const loyaltyPin = generateLoyaltyPin(existingPins.map((item) => item.loyaltyPin));
-
-  const user = await prisma.user.create({
-    data: {
-      role: "CUSTOMER",
-      customerProfile: {
-        create: {
-          fullName,
-          phoneNumber,
-          loyaltyPin,
-          customerType: "NEW",
-          loyaltyAccount: {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      const user = await prisma.user.create({
+        data: {
+          role: "CUSTOMER",
+          customerProfile: {
             create: {
-              currentStampCount: 0,
-              lifetimeStampCount: 0,
-              availableFreeDrinks: 0,
+              fullName,
+              phoneNumber,
+              loyaltyPin: generateLoyaltyPin(),
+              customerType: "NEW",
+              loyaltyAccount: {
+                create: {
+                  currentStampCount: 0,
+                  lifetimeStampCount: 0,
+                  availableFreeDrinks: 0,
+                },
+              },
             },
           },
         },
-      },
-    },
-    include: {
-      customerProfile: true,
-    },
-  });
+        select: {
+          id: true,
+        },
+      });
 
-  await createSession(user.id);
+      userId = user.id;
+      break;
+    } catch (error) {
+      if (isUniqueConstraintError(error, "phoneNumber")) {
+        redirectWithError("/register", "PHONE_EXISTS");
+      }
+
+      if (isUniqueConstraintError(error, "loyaltyPin")) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  if (!userId) {
+    redirectWithError("/register", "UNKNOWN");
+  }
+
+  await createSession(userId);
   revalidatePath("/");
   revalidatePath("/app");
   redirect(safePath(payload.data.redirectTo, "/app"));
@@ -329,94 +383,101 @@ export async function createOrderAction(formData: FormData) {
     redirectWithError(returnTo, "MENU_INACTIVE");
   }
 
-  await expireOverdueOrders();
-
-  const activeCount = await prisma.order.count({
-    where: {
-      customerId: customer.id,
-      status: {
-        in: ["RECEIVED", "ACCEPTED", "PREPARING", "READY"],
-      },
-      expiresAt: {
-        gt: now,
-      },
-    },
-  });
-
-  const eligibility = canCreateOrder({
-    activeUnpaidOrderCount: activeCount,
-    activeOrderLimitPerCustomer: settings.activeOrderLimitPerCustomer,
-    itemQuantity: payload.data.quantity,
-    newCustomerMaxItems: settings.newCustomerMaxItems,
-    customerType: customerSnapshot,
-  });
-
-  if (!eligibility.allowed) {
-    redirectWithError(returnTo, "ACTIVE_ORDER_LIMIT");
-  }
+  await expireOverdueOrders({ force: true });
 
   const pickupTime = new Date(now.getTime() + payload.data.pickupMinutes * 60_000);
   const expiresAt = computeOrderExpiresAt(now, settings.unpaidOrderExpiryMinutes);
   const quantity = payload.data.quantity;
   const totalAmount = new Prisma.Decimal(Number(menuItem.price) * quantity);
 
-  const order = await prisma.$transaction(async (tx) => {
-    const created = await tx.order.create({
-      data: {
-        customerId: customer.id,
-        status: "RECEIVED",
-        pickupTime,
-        placedAt: now,
-        expiresAt,
-        totalAmount,
-        isPaidAtShop: true,
-        riskState: customerSnapshot,
-        itemCount: quantity,
-        customerNameSnapshot: customer.fullName,
-        customerPhoneSnapshot: customer.phoneNumber,
-        customerTypeSnapshot: customerSnapshot,
-        sugarCount: payload.data.sugarCount,
-        notes: payload.data.notes || null,
-        voiceNoteDataUrl: voiceNote.value?.dataUrl ?? null,
-        voiceNoteMimeType: voiceNote.value?.mimeType ?? null,
-        voiceNoteDurationSec: voiceNote.value?.durationSec ?? null,
-        orderItems: {
-          create: {
-            menuItemId: menuItem.id,
-            quantity,
-            notes: menuItem.notesRequired ? payload.data.notes || null : payload.data.notes || null,
-            unitPrice: menuItem.price,
-          },
-        },
-      },
-      include: {
-        orderItems: {
-          include: {
-            menuItem: true,
-          },
-        },
-      },
-    });
+  let orderId: string;
 
-    if (customer.customerType === "NEW") {
-      await tx.customerProfile.update({
-        where: { id: customer.id },
-        data: {
-          customerType: "RETURNING",
-          lastOrderAt: now,
-        },
-      });
-    } else {
-      await tx.customerProfile.update({
-        where: { id: customer.id },
-        data: {
-          lastOrderAt: now,
-        },
-      });
+  try {
+    const order = await prisma.$transaction(
+      async (tx) => {
+        const activeCount = await tx.order.count({
+          where: {
+            customerId: customer.id,
+            status: {
+              in: ["RECEIVED", "ACCEPTED", "PREPARING", "READY"],
+            },
+            expiresAt: {
+              gt: now,
+            },
+          },
+        });
+
+        const eligibility = canCreateOrder({
+          activeUnpaidOrderCount: activeCount,
+          activeOrderLimitPerCustomer: settings.activeOrderLimitPerCustomer,
+          itemQuantity: payload.data.quantity,
+          newCustomerMaxItems: settings.newCustomerMaxItems,
+          customerType: customerSnapshot,
+        });
+
+        if (!eligibility.allowed) {
+          throw new ActionConflictError("ACTIVE_ORDER_LIMIT");
+        }
+
+        const created = await tx.order.create({
+          data: {
+            customerId: customer.id,
+            status: "RECEIVED",
+            pickupTime,
+            placedAt: now,
+            expiresAt,
+            totalAmount,
+            isPaidAtShop: true,
+            riskState: customerSnapshot,
+            itemCount: quantity,
+            customerNameSnapshot: customer.fullName,
+            customerPhoneSnapshot: customer.phoneNumber,
+            customerTypeSnapshot: customerSnapshot,
+            sugarCount: payload.data.sugarCount,
+            notes: payload.data.notes || null,
+            voiceNoteDataUrl: voiceNote.value?.dataUrl ?? null,
+            voiceNoteMimeType: voiceNote.value?.mimeType ?? null,
+            voiceNoteDurationSec: voiceNote.value?.durationSec ?? null,
+            orderItems: {
+              create: {
+                menuItemId: menuItem.id,
+                quantity,
+                notes: payload.data.notes || null,
+                unitPrice: menuItem.price,
+              },
+            },
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        await tx.customerProfile.update({
+          where: { id: customer.id },
+          data: {
+            customerType: customer.customerType === "NEW" ? "RETURNING" : undefined,
+            lastOrderAt: now,
+          },
+        });
+
+        return created;
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
+
+    orderId = order.id;
+  } catch (error) {
+    if (
+      error instanceof ActionConflictError ||
+      isSerializableTransactionConflict(error)
+    ) {
+      redirectWithError(returnTo, "ACTIVE_ORDER_LIMIT");
     }
 
-    return created;
-  });
+    throw error;
+  }
 
   revalidatePath("/app");
   revalidatePath("/menu");
@@ -424,7 +485,7 @@ export async function createOrderAction(formData: FormData) {
   revalidatePath("/staff/orders");
   revalidatePath("/staff/customers");
 
-  redirect(`/order/success/${order.id}`);
+  redirect(`/order/success/${orderId}`);
 }
 
 export async function updateOrderStatusAction(formData: FormData) {
@@ -1011,16 +1072,14 @@ export async function redeemRewardAction(formData: FormData) {
       },
     });
 
-    if (customer.loyaltyAccount) {
-      await tx.loyaltyAccount.update({
-        where: { customerId: customer.id },
-        data: {
-          availableFreeDrinks: {
-            decrement: 1,
-          },
+    await tx.loyaltyAccount.update({
+      where: { customerId: customer.id },
+      data: {
+        availableFreeDrinks: {
+          decrement: 1,
         },
-      });
-    }
+      },
+    });
 
     await tx.loyaltyStampEvent.create({
       data: {
