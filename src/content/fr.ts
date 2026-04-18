@@ -103,7 +103,8 @@ export const fr = {
       "Conservez ce PIN. Il permet un accès rapide sur ce téléphone sans OTP.",
   },
   home: {
-    greeting: (name: string) => `Bonjour, ${name}`,
+    greeting: (name: string, timeOfDay: "day" | "evening" = "day") =>
+      `${timeOfDay === "evening" ? "Bonsoir" : "Bonjour"}, ${name}`,
     orderCardTitle: "Commander vite",
     orderCardBody: "Choisissez un article et un créneau de retrait.",
     activeOrderTitle: "Commande en cours",
@@ -151,7 +152,7 @@ export const fr = {
   },
   rewards: {
     title: "Récompenses",
-    subtitle: "5 achats qualifiants = 1 boisson offerte.",
+    subtitle: "8 achats qualifiants = 1 boisson offerte.",
     unlockedTitle: "Boisson offerte débloquée",
     unlockedBody: "Votre crédit est stocké dans le compte et peut être utilisé plus tard.",
     available: "Disponible",

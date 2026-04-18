@@ -1,16 +1,88 @@
 import { Prisma, type OrderStatus } from "@prisma/client";
 
 import { prisma } from "./db";
+import { deleteVoiceNote } from "./voice-note-storage";
 import {
   compareStaffQueueOrders,
   displayCustomerType,
   isActiveOrderStatus,
+  LOYALTY_STAMP_THRESHOLD,
+  TERMINAL_ORDER_STATUSES,
+  terminalOrderRetentionCutoff,
+  terminalOrderVisibilityCutoff,
 } from "./domain";
 
 const activeStatuses = ["RECEIVED", "ACCEPTED", "PREPARING", "READY"] as const;
 const EXPIRY_SWEEP_INTERVAL_MS = 15_000;
+const TERMINAL_PURGE_INTERVAL_MS = 60 * 60 * 1000;
+const TERMINAL_PURGE_BATCH_SIZE = 200;
 
 let lastExpirySweepAt = 0;
+let lastTerminalPurgeAt = 0;
+
+function buildOperationalQueueWhere(now: Date): Prisma.OrderWhereInput {
+  return {
+    OR: [
+      {
+        status: {
+          in: activeStatuses as unknown as OrderStatus[],
+        },
+      },
+      {
+        status: {
+          in: TERMINAL_ORDER_STATUSES as unknown as OrderStatus[],
+        },
+        updatedAt: {
+          gte: terminalOrderVisibilityCutoff(now),
+        },
+      },
+    ],
+  };
+}
+
+function buildTerminalRetentionWhere(now: Date): Prisma.OrderWhereInput {
+  return {
+    status: {
+      in: TERMINAL_ORDER_STATUSES as unknown as OrderStatus[],
+    },
+    updatedAt: {
+      lt: terminalOrderRetentionCutoff(now),
+    },
+  };
+}
+
+async function purgeRetainedTerminalOrders(now: Date) {
+  const ordersToPurge = await prisma.order.findMany({
+    where: buildTerminalRetentionWhere(now),
+    select: {
+      id: true,
+      voiceNoteStorageKey: true,
+    },
+    orderBy: {
+      updatedAt: "asc",
+    },
+    take: TERMINAL_PURGE_BATCH_SIZE,
+  });
+
+  if (!ordersToPurge.length) {
+    return { count: 0 };
+  }
+
+  await Promise.all(
+    ordersToPurge
+      .map((order) => order.voiceNoteStorageKey)
+      .filter((storageKey): storageKey is string => Boolean(storageKey))
+      .map((storageKey) => deleteVoiceNote(storageKey).catch(() => undefined)),
+  );
+
+  return prisma.order.deleteMany({
+    where: {
+      id: {
+        in: ordersToPurge.map((order) => order.id),
+      },
+    },
+  });
+}
 
 export async function ensureStoreSettings() {
   const existing = await prisma.storeSettings.findFirst();
@@ -33,29 +105,48 @@ export async function ensureStoreSettings() {
 
 export async function expireOverdueOrders(options?: { force?: boolean }) {
   const now = new Date();
+  const nowMs = now.getTime();
+  const shouldRunExpiry =
+    options?.force || nowMs - lastExpirySweepAt >= EXPIRY_SWEEP_INTERVAL_MS;
+  const shouldRunTerminalPurge =
+    options?.force || nowMs - lastTerminalPurgeAt >= TERMINAL_PURGE_INTERVAL_MS;
 
-  if (!options?.force) {
-    const nowMs = now.getTime();
-    if (nowMs - lastExpirySweepAt < EXPIRY_SWEEP_INTERVAL_MS) {
-      return { count: 0 };
-    }
+  if (!shouldRunExpiry && !shouldRunTerminalPurge) {
+    return { count: 0, purgedCount: 0 };
+  }
 
+  if (shouldRunExpiry) {
     lastExpirySweepAt = nowMs;
   }
 
-  return prisma.order.updateMany({
-    where: {
-      status: {
-        in: activeStatuses as unknown as OrderStatus[],
-      },
-      expiresAt: {
-        lt: now,
-      },
-    },
-    data: {
-      status: "EXPIRED",
-    },
-  });
+  if (shouldRunTerminalPurge) {
+    lastTerminalPurgeAt = nowMs;
+  }
+
+  const expiryResult = shouldRunExpiry
+    ? await prisma.order.updateMany({
+        where: {
+          status: {
+            in: activeStatuses as unknown as OrderStatus[],
+          },
+          expiresAt: {
+            lt: now,
+          },
+        },
+        data: {
+          status: "EXPIRED",
+        },
+      })
+    : { count: 0 };
+
+  const purgeResult = shouldRunTerminalPurge
+    ? await purgeRetainedTerminalOrders(now)
+    : { count: 0 };
+
+  return {
+    count: expiryResult.count,
+    purgedCount: purgeResult.count,
+  };
 }
 
 export async function getMenuCatalog(includeInactive = false) {
@@ -191,7 +282,7 @@ export async function getCustomerHomeData(customerId: string) {
       quickReorderSource,
       availableReward,
       loyaltyAccount,
-      progressLabel: `${loyaltyAccount.currentStampCount}/5`,
+      progressLabel: `${loyaltyAccount.currentStampCount}/${LOYALTY_STAMP_THRESHOLD}`,
       rewardLabel: `${loyaltyAccount.availableFreeDrinks}`,
     },
   };
@@ -350,13 +441,21 @@ export async function getStaffQueueData(
   await expireOverdueOrders();
   const scopedToSingleStatus = Boolean(statusFilter && statusFilter !== "ALL");
   const showDemo = options?.showDemo ?? false;
-  const baseWhere: Prisma.OrderWhereInput = showDemo
-    ? {}
-    : {
-        customer: {
-          isDemo: false,
-        },
-      };
+  const now = new Date();
+  const baseWhere: Prisma.OrderWhereInput = {
+    AND: [
+      buildOperationalQueueWhere(now),
+      ...(showDemo
+        ? []
+        : [
+            {
+              customer: {
+                isDemo: false,
+              },
+            } satisfies Prisma.OrderWhereInput,
+          ]),
+    ],
+  };
   const ordersWhere: Prisma.OrderWhereInput = scopedToSingleStatus
     ? {
         AND: [

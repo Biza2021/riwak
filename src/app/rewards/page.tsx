@@ -4,6 +4,7 @@ import { CustomerBottomNav } from "@/components/navigation";
 import { SubmitButton } from "@/components/submit-button";
 import { Screen, Card, SectionHeader, Badge, MetricCard, EmptyState, SecondaryButton } from "@/components/ui";
 import { fr } from "@/content/fr";
+import { LOYALTY_STAMP_THRESHOLD } from "@/lib/domain";
 import { getCustomerRewardsData } from "@/lib/queries";
 import { requireCustomerSession } from "@/lib/session";
 import { redeemRewardAction } from "@/lib/actions";
@@ -40,8 +41,8 @@ export default async function RewardsPage() {
           <div className="grid grid-cols-2 gap-3">
             <MetricCard
               title={fr.rewards.stampLabel}
-              value={`${loyaltyAccount.currentStampCount}/5`}
-              detail={fr.loyalty.progress(loyaltyAccount.currentStampCount, 5)}
+              value={`${loyaltyAccount.currentStampCount}/${LOYALTY_STAMP_THRESHOLD}`}
+              detail={fr.loyalty.progress(loyaltyAccount.currentStampCount, LOYALTY_STAMP_THRESHOLD)}
               tone="gold"
             />
             <MetricCard

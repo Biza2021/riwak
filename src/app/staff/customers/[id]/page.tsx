@@ -12,6 +12,7 @@ import {
   SecondaryButton,
 } from "@/components/ui";
 import { fr } from "@/content/fr";
+import { LOYALTY_STAMP_THRESHOLD } from "@/lib/domain";
 import { formatDateTime, formatMemberId } from "@/lib/format";
 import { getStaffCustomerDetail } from "@/lib/queries";
 import {
@@ -76,7 +77,7 @@ export default async function StaffCustomerDetailPage({
                   Tampons
                 </p>
                 <p className="mt-2 text-xl font-semibold text-[#2d1b12]">
-                  {customer.loyaltyAccount?.currentStampCount ?? 0}/5
+                  {customer.loyaltyAccount?.currentStampCount ?? 0}/{LOYALTY_STAMP_THRESHOLD}
                 </p>
               </div>
               <div className="rounded-2xl bg-[#f8f1e7] px-4 py-3">

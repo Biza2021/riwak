@@ -168,6 +168,7 @@ model Order {
   @@index([customerId, status, expiresAt])
   @@index([status, expiresAt])
   @@index([status, placedAt])
+  @@index([status, updatedAt])
 }
 
 model OrderItem {

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { BrandLogo } from "@/components/brand-logo";
 import { fr } from "@/content/fr";
 import { formatCurrency, formatDateTime, formatTimeOnly } from "@/lib/format";
+import { LOYALTY_STAMP_THRESHOLD } from "@/lib/domain";
 import {
   customerTypeLabel,
   customerTypeTone,
@@ -275,7 +276,9 @@ export function StaffOrdersLive({
                         {customerTypeLabel(order.customer.customerType)}
                       </Badge>
                       {order.customer.currentStampCount !== null ? (
-                        <Badge tone="gold">{order.customer.currentStampCount}/5</Badge>
+                        <Badge tone="gold">
+                          {order.customer.currentStampCount}/{LOYALTY_STAMP_THRESHOLD}
+                        </Badge>
                       ) : null}
                     </div>
 

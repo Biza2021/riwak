@@ -18,7 +18,11 @@ import {
 import { BrandLogo } from "@/components/brand-logo";
 import { fr } from "@/content/fr";
 import { filterStaffCustomers } from "@/lib/customer-lookup";
-import { applyLoyaltyPurchase, redeemRewardState } from "@/lib/domain";
+import {
+  applyLoyaltyPurchase,
+  LOYALTY_STAMP_THRESHOLD,
+  redeemRewardState,
+} from "@/lib/domain";
 import { formatDateTime, formatMemberId } from "@/lib/format";
 import {
   customerTypeLabel,
@@ -273,7 +277,7 @@ function CustomerActionCard({
             Tampons
           </p>
           <p className="mt-2 font-semibold text-[#2d1b12]">
-            {customer.currentStampCount}/5
+            {customer.currentStampCount}/{LOYALTY_STAMP_THRESHOLD}
           </p>
         </div>
         <div className="rounded-2xl bg-[#f8f1e7] px-4 py-3 text-sm">

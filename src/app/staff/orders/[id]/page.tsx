@@ -12,6 +12,7 @@ import {
 } from "@/components/ui";
 import { fr } from "@/content/fr";
 import { updateOrderStatusAction } from "@/lib/actions";
+import { LOYALTY_STAMP_THRESHOLD } from "@/lib/domain";
 import { getOrderById } from "@/lib/queries";
 import { requireStaffSession } from "@/lib/session";
 import { getVoiceNotePlaybackUrl } from "@/lib/voice-note-storage";
@@ -106,7 +107,7 @@ export default async function StaffOrderDetailPage({
               </Badge>
               {order.customer.loyaltyAccount ? (
                 <Badge tone="gold">
-                  {order.customer.loyaltyAccount.currentStampCount}/5
+                  {order.customer.loyaltyAccount.currentStampCount}/{LOYALTY_STAMP_THRESHOLD}
                 </Badge>
               ) : null}
               <Badge tone={order.isPaidAtShop ? "green" : "red"}>

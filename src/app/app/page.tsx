@@ -14,6 +14,7 @@ import {
   MetricCard,
 } from "@/components/ui";
 import { fr } from "@/content/fr";
+import { LOYALTY_STAMP_THRESHOLD } from "@/lib/domain";
 import { getCustomerHomeData } from "@/lib/queries";
 import { requireCustomerSession } from "@/lib/session";
 import {
@@ -24,6 +25,17 @@ import {
 import { formatDateTime, formatTimeOnly } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+
+function resolveGreetingTimeOfDay(now: Date) {
+  const formatter = new Intl.DateTimeFormat("fr-MA", {
+    hour: "numeric",
+    hour12: false,
+    timeZone: "Africa/Casablanca",
+  });
+  const hour = Number.parseInt(formatter.format(now), 10);
+
+  return Number.isFinite(hour) && hour >= 18 ? "evening" : "day";
+}
 
 function bottomNav(active: string) {
   return (
@@ -66,6 +78,7 @@ export default async function CustomerHomePage() {
     lifetimeStampCount: 0,
     availableFreeDrinks: 0,
   };
+  const greetingTimeOfDay = resolveGreetingTimeOfDay(new Date());
 
   return (
     <>
@@ -74,7 +87,7 @@ export default async function CustomerHomePage() {
         <div className="space-y-5">
           <BrandLogo variant="navbar" priority className="w-[116px] sm:w-[126px]" />
           <SectionHeader
-            title={fr.home.greeting(customer.fullName)}
+            title={fr.home.greeting(customer.fullName, greetingTimeOfDay)}
             description={fr.tagline}
           />
 
@@ -97,7 +110,7 @@ export default async function CustomerHomePage() {
           <div className="grid grid-cols-2 gap-3">
             <MetricCard
               title={fr.home.loyaltyTitle}
-              value={`${loyaltyAccount.currentStampCount}/5`}
+              value={`${loyaltyAccount.currentStampCount}/${LOYALTY_STAMP_THRESHOLD}`}
               detail={`${loyaltyAccount.availableFreeDrinks} ${fr.rewards.freeDrinkLabel.toLowerCase()}`}
               tone="gold"
             />

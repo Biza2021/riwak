@@ -6,9 +6,12 @@ import {
   compareStaffQueueOrders,
   computeOrderExpiresAt,
   displayCustomerType,
+  isTerminalOrderStatus,
   isValidSugarCount,
   normalizeVoiceNoteInput,
   redeemRewardState,
+  terminalOrderRetentionCutoff,
+  terminalOrderVisibilityCutoff,
 } from "../src/lib/domain";
 
 describe("order rules", () => {
@@ -81,6 +84,24 @@ describe("order rules", () => {
     expect(orders.map((order) => order.id)).toEqual(["newer", "older"]);
   });
 
+  it("recognizes terminal order statuses", () => {
+    expect(isTerminalOrderStatus("PICKED_UP")).toBe(true);
+    expect(isTerminalOrderStatus("CANCELLED")).toBe(true);
+    expect(isTerminalOrderStatus("EXPIRED")).toBe(true);
+    expect(isTerminalOrderStatus("READY")).toBe(false);
+  });
+
+  it("builds the correct terminal order visibility and retention windows", () => {
+    const now = new Date("2026-04-18T12:00:00Z");
+
+    expect(terminalOrderVisibilityCutoff(now).toISOString()).toBe(
+      "2026-04-17T12:00:00.000Z",
+    );
+    expect(terminalOrderRetentionCutoff(now).toISOString()).toBe(
+      "2026-03-19T12:00:00.000Z",
+    );
+  });
+
   it("accepts only the configured sugar options", () => {
     expect(isValidSugarCount(2)).toBe(true);
     expect(isValidSugarCount(4)).toBe(false);
@@ -115,16 +136,16 @@ describe("order rules", () => {
 });
 
 describe("loyalty rules", () => {
-  it("increments stamps and unlocks a reward at 5", () => {
+  it("increments stamps and unlocks a reward at 8", () => {
     const result = applyLoyaltyPurchase({
-      currentStampCount: 4,
-      lifetimeStampCount: 9,
+      currentStampCount: 7,
+      lifetimeStampCount: 15,
       availableFreeDrinks: 0,
       stampsEarned: 1,
     });
 
     expect(result.currentStampCount).toBe(0);
-    expect(result.lifetimeStampCount).toBe(10);
+    expect(result.lifetimeStampCount).toBe(16);
     expect(result.availableFreeDrinks).toBe(1);
     expect(result.rewardsCreated).toBe(1);
   });

@@ -1,4 +1,4 @@
-export const LOYALTY_STAMP_THRESHOLD = 5;
+export const LOYALTY_STAMP_THRESHOLD = 8;
 
 export const PICKUP_OPTIONS = [0, 10, 15, 20] as const;
 export type PickupOptionMinutes = (typeof PICKUP_OPTIONS)[number];
@@ -21,6 +21,13 @@ export const ORDER_STATUSES = [
 ] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
+export const TERMINAL_ORDER_STATUSES = [
+  "PICKED_UP",
+  "CANCELLED",
+  "EXPIRED",
+] as const;
+export const STAFF_QUEUE_TERMINAL_VISIBILITY_HOURS = 24;
+export const TERMINAL_ORDER_RETENTION_DAYS = 30;
 
 export const CUSTOMER_TYPES = [
   "NEW",
@@ -86,6 +93,24 @@ export function slugifyMenuName(value: string) {
 
 export function isActiveOrderStatus(status: OrderStatus) {
   return ["RECEIVED", "ACCEPTED", "PREPARING", "READY"].includes(status);
+}
+
+export function isTerminalOrderStatus(status: OrderStatus) {
+  return TERMINAL_ORDER_STATUSES.includes(
+    status as (typeof TERMINAL_ORDER_STATUSES)[number],
+  );
+}
+
+export function terminalOrderVisibilityCutoff(now = new Date()) {
+  return new Date(
+    now.getTime() - STAFF_QUEUE_TERMINAL_VISIBILITY_HOURS * 60 * 60 * 1000,
+  );
+}
+
+export function terminalOrderRetentionCutoff(now = new Date()) {
+  return new Date(
+    now.getTime() - TERMINAL_ORDER_RETENTION_DAYS * 24 * 60 * 60 * 1000,
+  );
 }
 
 export function compareStaffQueueOrders<
