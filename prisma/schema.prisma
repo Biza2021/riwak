@@ -46,6 +46,12 @@ enum LoyaltyEventType {
   ADJUSTED
 }
 
+enum NotificationKind {
+  STAFF_NEW_ORDER
+  CUSTOMER_ORDER_READY
+  CUSTOMER_REWARD_EARNED
+}
+
 enum TrustEventType {
   TRUSTED
   LIMITED
@@ -66,6 +72,7 @@ model User {
   customerProfile CustomerProfile?
   staffUser       StaffUser?
   sessions        AuthSession[]
+  pushSubscriptions PushSubscription[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 }
@@ -119,6 +126,33 @@ model AuthSession {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model PushSubscription {
+  id         String                 @id @default(cuid())
+  userId     String
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint   String                 @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  deliveries NotificationDelivery[]
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
+
+  @@index([userId, updatedAt])
+}
+
+model NotificationDelivery {
+  id             String            @id @default(cuid())
+  subscriptionId String
+  subscription   PushSubscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  eventKey       String
+  kind           NotificationKind
+  createdAt      DateTime          @default(now())
+
+  @@unique([subscriptionId, eventKey])
+  @@index([eventKey])
 }
 
 model MenuItem {

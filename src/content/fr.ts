@@ -244,6 +244,33 @@ export const fr = {
       "Sur téléphone, ajoutez Riwak à l’écran d’accueil pour une ouverture plus rapide et plus fiable dans la boutique.",
     iosHint: "Sur iPhone, utilisez le bouton Partager puis « Ajouter à l’écran d’accueil ».",
   },
+  notifications: {
+    enable: "Activer les notifications",
+    disable: "Désactiver les notifications",
+    pending: "Mise à jour...",
+    unsupported: "Les notifications ne sont pas disponibles sur ce navigateur.",
+    unavailable: "Les notifications push ne sont pas configurées pour le moment.",
+    permissionDenied:
+      "Les notifications sont bloquées. Activez-les depuis les réglages du navigateur.",
+    customer: {
+      title: "Notifications de commande",
+      description:
+        "Recevez une alerte quand votre commande est prête et quand une boisson offerte est débloquée.",
+      enabled:
+        "Les alertes de commande et de récompense sont actives sur cet appareil.",
+    },
+    staff: {
+      title: "Notifications barista",
+      description:
+        "Recevez une alerte quand une nouvelle commande arrive, même si la file n'est pas ouverte.",
+      enabled:
+        "Les alertes de nouvelle commande sont actives sur cet appareil.",
+    },
+    errors: {
+      subscribeFailed: "Impossible d'activer les notifications pour le moment.",
+      unsubscribeFailed: "Impossible de désactiver les notifications pour le moment.",
+    },
+  },
   settings: {
     title: "Paramètres",
     subtitle: "Gérez le menu et les règles sans toucher à l’architecture.",

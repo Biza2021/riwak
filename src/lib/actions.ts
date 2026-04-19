@@ -22,6 +22,11 @@ import {
 import { createSession, clearSession, requireCustomerSession, requireStaffSession } from "./session";
 import { ensureStoreSettings, expireOverdueOrders } from "./queries";
 import {
+  sendCustomerOrderReadyNotification,
+  sendCustomerRewardEarnedNotification,
+  sendStaffNewOrderNotification,
+} from "./push-notifications";
+import {
   deleteVoiceNote,
   isVoiceNoteStorageError,
   isVoiceNoteStorageConfigured,
@@ -523,6 +528,12 @@ export async function createOrderAction(formData: FormData) {
     throw error;
   }
 
+  await sendStaffNewOrderNotification({
+    orderId,
+    customerName: customer.fullName,
+    itemsSummary: `${menuItem.name} x${quantity}`,
+  }).catch(() => undefined);
+
   revalidatePath("/app");
   revalidatePath("/menu");
   revalidatePath("/orders");
@@ -546,14 +557,20 @@ export async function updateOrderStatusAction(formData: FormData) {
 
   const order = await prisma.order.findUnique({
     where: { id: payload.data.orderId },
-    include: {
+    select: {
+      id: true,
+      customerId: true,
+      status: true,
+      loyaltyGrantedAt: true,
       customer: {
-        include: {
+        select: {
+          userId: true,
           loyaltyAccount: true,
         },
       },
       orderItems: {
-        include: {
+        select: {
+          quantity: true,
           menuItem: true,
         },
       },
@@ -566,6 +583,22 @@ export async function updateOrderStatusAction(formData: FormData) {
 
   const wasPickedUp = order.status === "PICKED_UP";
   const nextStatus = payload.data.status;
+  const shouldGrantLoyalty =
+    nextStatus === "PICKED_UP" && !wasPickedUp && !order.loyaltyGrantedAt;
+  const qualifyingUnits = shouldGrantLoyalty
+    ? order.orderItems.reduce((sum, orderItem) => {
+        return sum + (orderItem.menuItem.isQualifying ? orderItem.quantity : 0);
+      }, 0)
+    : 0;
+  const projectedLoyaltyResult =
+    shouldGrantLoyalty && qualifyingUnits > 0
+      ? applyLoyaltyPurchase({
+          currentStampCount: order.customer.loyaltyAccount?.currentStampCount ?? 0,
+          lifetimeStampCount: order.customer.loyaltyAccount?.lifetimeStampCount ?? 0,
+          availableFreeDrinks: order.customer.loyaltyAccount?.availableFreeDrinks ?? 0,
+          stampsEarned: qualifyingUnits,
+        })
+      : null;
 
   await prisma.$transaction(async (tx) => {
     await tx.order.update({
@@ -575,13 +608,9 @@ export async function updateOrderStatusAction(formData: FormData) {
       },
     });
 
-    if (nextStatus !== "PICKED_UP" || wasPickedUp || order.loyaltyGrantedAt) {
+    if (!shouldGrantLoyalty) {
       return;
     }
-
-    const qualifyingUnits = order.orderItems.reduce((sum, orderItem) => {
-      return sum + (orderItem.menuItem.isQualifying ? orderItem.quantity : 0);
-    }, 0);
 
     if (qualifyingUnits <= 0) {
       await tx.order.update({
@@ -594,7 +623,7 @@ export async function updateOrderStatusAction(formData: FormData) {
     }
 
     const account = order.customer.loyaltyAccount;
-    const loyaltyResult = applyLoyaltyPurchase({
+    const loyaltyResult = projectedLoyaltyResult ?? applyLoyaltyPurchase({
       currentStampCount: account?.currentStampCount ?? 0,
       lifetimeStampCount: account?.lifetimeStampCount ?? 0,
       availableFreeDrinks: account?.availableFreeDrinks ?? 0,
@@ -652,6 +681,21 @@ export async function updateOrderStatusAction(formData: FormData) {
     });
   });
 
+  if (nextStatus === "READY" && order.status !== "READY") {
+    await sendCustomerOrderReadyNotification({
+      userId: order.customer.userId,
+      orderId: order.id,
+    }).catch(() => undefined);
+  }
+
+  if ((projectedLoyaltyResult?.rewardsCreated ?? 0) > 0) {
+    await sendCustomerRewardEarnedNotification({
+      userId: order.customer.userId,
+      sourceKey: `order:${order.id}`,
+      rewardsCreated: projectedLoyaltyResult?.rewardsCreated ?? 0,
+    }).catch(() => undefined);
+  }
+
   revalidatePath("/staff/orders");
   revalidatePath(`/staff/orders/${order.id}`);
   revalidatePath("/staff/customers");
@@ -680,7 +724,9 @@ export async function updateTrustAction(formData: FormData) {
 
   const customer = await prisma.customerProfile.findUnique({
     where: { id: payload.data.customerId },
-    include: {
+    select: {
+      id: true,
+      userId: true,
       loyaltyAccount: true,
     },
   });
@@ -801,7 +847,9 @@ export async function adjustLoyaltyAction(formData: FormData) {
 
   const customer = await prisma.customerProfile.findUnique({
     where: { id: payload.data.customerId },
-    include: {
+    select: {
+      id: true,
+      userId: true,
       loyaltyAccount: true,
     },
   });
@@ -834,6 +882,7 @@ export async function adjustLoyaltyAction(formData: FormData) {
           availableFreeDrinks: nextAvailableFreeDrinks,
           rewardsCreated: 0,
         };
+  const createdRewardIds: string[] = [];
 
   await prisma.$transaction(async (tx) => {
     if (customer.loyaltyAccount) {
@@ -868,16 +917,28 @@ export async function adjustLoyaltyAction(formData: FormData) {
 
     if (loyaltyResult.rewardsCreated > 0) {
       for (let index = 0; index < loyaltyResult.rewardsCreated; index += 1) {
-        await tx.reward.create({
+        const reward = await tx.reward.create({
           data: {
             customerId: customer.id,
             type: "FREE_DRINK",
             status: "AVAILABLE",
           },
+          select: {
+            id: true,
+          },
         });
+        createdRewardIds.push(reward.id);
       }
     }
   });
+
+  if (loyaltyResult.rewardsCreated > 0) {
+    await sendCustomerRewardEarnedNotification({
+      userId: customer.userId,
+      sourceKey: `manual:${createdRewardIds.join(",")}`,
+      rewardsCreated: loyaltyResult.rewardsCreated,
+    }).catch(() => undefined);
+  }
 
   revalidatePath(`/staff/customers/${customer.id}`);
   revalidatePath("/app");
@@ -919,6 +980,7 @@ export async function quickAddCustomerStampsAction(input: {
     availableFreeDrinks: current.availableFreeDrinks,
     stampsEarned: payload.data.delta,
   });
+  const createdRewardIds: string[] = [];
 
   await prisma.$transaction(async (tx) => {
     if (customer.loyaltyAccount) {
@@ -953,16 +1015,28 @@ export async function quickAddCustomerStampsAction(input: {
 
     if (loyaltyResult.rewardsCreated > 0) {
       for (let index = 0; index < loyaltyResult.rewardsCreated; index += 1) {
-        await tx.reward.create({
+        const reward = await tx.reward.create({
           data: {
             customerId: customer.id,
             type: "FREE_DRINK",
             status: "AVAILABLE",
           },
+          select: {
+            id: true,
+          },
         });
+        createdRewardIds.push(reward.id);
       }
     }
   });
+
+  if (loyaltyResult.rewardsCreated > 0) {
+    await sendCustomerRewardEarnedNotification({
+      userId: customer.userId,
+      sourceKey: `manual:${createdRewardIds.join(",")}`,
+      rewardsCreated: loyaltyResult.rewardsCreated,
+    }).catch(() => undefined);
+  }
 
   revalidatePath("/staff/customers");
   revalidatePath(`/staff/customers/${customer.id}`);

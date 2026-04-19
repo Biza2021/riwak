@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { CustomerBottomNav } from "@/components/navigation";
+import { PushNotificationPreferences } from "@/components/push-notification-preferences";
 import { SubmitButton } from "@/components/submit-button";
 import { Screen, Card, SectionHeader, Badge, Notice } from "@/components/ui";
 import { fr } from "@/content/fr";
@@ -89,6 +90,13 @@ export default async function AccountPage() {
           <Link href="/rewards" className="block text-center text-sm font-semibold text-[#8c6239]">
             {fr.navCustomer.rewards}
           </Link>
+
+          <PushNotificationPreferences
+            title={fr.notifications.customer.title}
+            description={fr.notifications.customer.description}
+            enabledDescription={fr.notifications.customer.enabled}
+            vapidPublicKey={process.env.WEB_PUSH_PUBLIC_KEY ?? ""}
+          />
         </div>
       </Screen>
       <CustomerBottomNav

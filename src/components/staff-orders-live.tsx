@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { BrandLogo } from "@/components/brand-logo";
+import { PushNotificationPreferences } from "@/components/push-notification-preferences";
 import { fr } from "@/content/fr";
 import { formatCurrency, formatDateTime, formatTimeOnly } from "@/lib/format";
 import { LOYALTY_STAMP_THRESHOLD } from "@/lib/domain";
@@ -73,10 +74,12 @@ export function StaffOrdersLive({
   initialData,
   status,
   showDemo,
+  vapidPublicKey,
 }: {
   initialData: StaffQueueSnapshot;
   status: string;
   showDemo: boolean;
+  vapidPublicKey: string;
 }) {
   const [queueData, setQueueData] = useState(initialData);
   const [newOrderCount, setNewOrderCount] = useState(0);
@@ -193,6 +196,13 @@ export function StaffOrdersLive({
       <SectionHeader
         title={fr.staff.queueTitle}
         description={fr.staff.queueSubtitle}
+      />
+
+      <PushNotificationPreferences
+        title={fr.notifications.staff.title}
+        description={fr.notifications.staff.description}
+        enabledDescription={fr.notifications.staff.enabled}
+        vapidPublicKey={vapidPublicKey}
       />
 
       <div className="grid grid-cols-2 gap-3">

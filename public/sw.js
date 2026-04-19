@@ -1,4 +1,4 @@
-const CACHE_NAME = "riwak-v6";
+const CACHE_NAME = "riwak-v7";
 const CORE_URLS = [
   "/",
   "/register",
@@ -93,6 +93,61 @@ self.addEventListener("fetch", (event) => {
           return response;
         })
         .catch(() => cached);
+    }),
+  );
+});
+
+self.addEventListener("push", (event) => {
+  if (!event.data) {
+    return;
+  }
+
+  let payload = null;
+
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!payload?.title) {
+    return;
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body ?? "",
+      icon: payload.icon ?? "/pwa/riwak-192.png?v=2026-04-17-appicon",
+      badge: payload.badge ?? "/brand/riwak-icon-only.png?v=2026-04-17-transparent",
+      tag: payload.tag ?? undefined,
+      data: {
+        url: payload.url ?? "/",
+      },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const targetUrl = new URL(
+    event.notification.data?.url ?? "/",
+    self.location.origin,
+  ).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      const existingClient = clients[0];
+
+      if (existingClient) {
+        if ("navigate" in existingClient) {
+          existingClient.navigate(targetUrl);
+        }
+
+        return existingClient.focus();
+      }
+
+      return self.clients.openWindow(targetUrl);
     }),
   );
 });

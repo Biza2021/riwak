@@ -28,6 +28,7 @@ export default async function StaffOrdersPage({
           initialData={initialData}
           status={status}
           showDemo={showDemo}
+          vapidPublicKey={process.env.WEB_PUSH_PUBLIC_KEY ?? ""}
         />
       </Screen>
       <StaffTopNav

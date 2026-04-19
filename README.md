@@ -28,7 +28,7 @@ I kept Prisma on version 6 for this MVP because it keeps the schema and migratio
 - order-ahead without online payment
 - staff queue with live order status updates
 - simple loyalty stamps
-- 5 stamps = 1 free drink
+- 8 stamps = 1 free drink
 - reward wallet and reward redemption
 - trust levels for new, returning, trusted, and limited customers
 - admin menu/configuration screen
@@ -73,6 +73,20 @@ S3_ACCESS_KEY_ID=
 S3_SECRET_ACCESS_KEY=
 S3_FORCE_PATH_STYLE=true
 S3_SIGNED_URL_TTL_SECONDS=3600
+```
+
+Push notifications require Web Push / VAPID variables:
+
+```env
+WEB_PUSH_PUBLIC_KEY=
+WEB_PUSH_PRIVATE_KEY=
+WEB_PUSH_SUBJECT=mailto:notifications@riwak.ma
+```
+
+You can generate a VAPID key pair with:
+
+```bash
+npx web-push generate-vapid-keys
 ```
 
 ### 2. Start PostgreSQL
@@ -140,7 +154,7 @@ Use the phone number + PIN on the register page to sign in quickly.
 ## Loyalty Rules
 
 - 1 qualifying purchase = 1 stamp
-- 5 stamps = 1 free drink
+- 8 stamps = 1 free drink
 - the free drink is stored in the customer wallet until redeemed
 - redemption decrements the available free drink balance
 - stamp events and reward events are saved for auditability
@@ -179,6 +193,7 @@ The menu is stored in the database so the admin screen can add, hide, rename, or
 - basic offline page and service worker
 - live operational routes and API endpoints bypass the offline cache to avoid stale queue/status data
 - voice-note files are stored in object storage and only metadata stays in PostgreSQL
+- web push notifications support staff new-order alerts and customer ready / reward alerts when VAPID keys are configured
 
 ## Railway Deployment
 
@@ -186,7 +201,15 @@ Recommended production flow:
 
 1. Set `DATABASE_URL` in Railway
 2. Set the S3-compatible storage variables used for voice notes
-3. Set bootstrap credentials for the first privileged users:
+3. Set the Web Push / VAPID variables used for notifications:
+
+```bash
+WEB_PUSH_PUBLIC_KEY=...
+WEB_PUSH_PRIVATE_KEY=...
+WEB_PUSH_SUBJECT=mailto:notifications@your-domain.com
+```
+
+4. Set bootstrap credentials for the first privileged users:
 
 ```bash
 BOOTSTRAP_ADMIN_EMAIL=...
@@ -195,20 +218,20 @@ BOOTSTRAP_STAFF_EMAIL=...
 BOOTSTRAP_STAFF_PASSWORD=...
 ```
 
-4. Build with:
+5. Build with:
 
 ```bash
 npm run prisma:generate
 npm run build
 ```
 
-5. Before starting a new release, run migrations:
+6. Before starting a new release, run migrations:
 
 ```bash
 npx prisma migrate deploy
 ```
 
-6. Start the app with:
+7. Start the app with:
 
 ```bash
 npm run start
@@ -220,6 +243,7 @@ Notes:
 - Prisma migrations are committed in `prisma/migrations`
 - the app expects PostgreSQL in production
 - voice notes require an S3-compatible bucket reachable from the deployed app
+- push notifications require valid VAPID keys and an HTTPS deployment
 - service worker cache versions are bumped when icon or offline-shell assets change
 
 ### Bootstrap Initial Staff/Admin Users
