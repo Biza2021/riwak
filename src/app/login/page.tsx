@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { BrandLogo } from "@/components/brand-logo";
 import { SubmitButton } from "@/components/submit-button";
@@ -15,12 +16,22 @@ import {
 import { fr } from "@/content/fr";
 import { customerLoginAction } from "@/lib/actions";
 import { getErrorMessage } from "@/lib/messages";
+import { getCurrentSession } from "@/lib/session";
 
 export default async function LoginPage({
   searchParams,
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const session = await getCurrentSession({ touch: false });
+  if (session?.user.customerProfile) {
+    redirect("/app");
+  }
+
+  if (session?.user.staffUser) {
+    redirect("/staff/orders");
+  }
+
   const params = (await searchParams) ?? {};
   const error = getErrorMessage(params.error);
 
@@ -53,11 +64,12 @@ export default async function LoginPage({
               />
             </div>
             <div>
-              <FieldLabel>{fr.common.loyaltyPin}</FieldLabel>
+              <FieldLabel>{fr.auth.recoveryCodeLabel}</FieldLabel>
               <TextField
                 name="loyaltyPin"
                 inputMode="numeric"
                 pattern="[0-9]{6}"
+                autoComplete="one-time-code"
                 placeholder={fr.forms.pinPlaceholder}
                 required
               />

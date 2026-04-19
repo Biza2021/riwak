@@ -75,12 +75,13 @@ export const fr = {
     eyebrow: "Commande mobile",
     title: "Riwak simplifie la pause café.",
     subtitle:
-      "Commandez en avance, payez au comptoir, récupérez vite. Fidélité simple, PIN automatique, interface pensée pour le téléphone.",
+      "Commandez en avance, payez au comptoir, récupérez vite. Fidélité simple, interface pensée pour le téléphone.",
     registerCardTitle: "Nouveau client",
     registerCardBody: "Créez votre compte en moins d’une minute.",
-    returningCardTitle: "Déjà inscrit ?",
-    returningCardBody: "Retrouvez votre compte avec votre téléphone et votre PIN.",
-    returningInlineBody: "Connectez-vous rapidement avec votre téléphone et votre PIN.",
+    returningCardTitle: "Nouvel appareil ?",
+    returningCardBody: "Retrouvez votre compte avec votre téléphone et votre code de secours.",
+    returningInlineBody:
+      "Sur ce téléphone, vous restez connecté. Utilisez ce lien seulement si vous changez d’appareil.",
     staffCardTitle: "Espace équipe",
     staffCardBody: "Accès barista et admin pour les commandes et le suivi client.",
     staffLinkBody: "Accès barista et admin",
@@ -91,16 +92,18 @@ export const fr = {
   auth: {
     registerTitle: "Créer votre compte client",
     registerBody:
-      "Entrez votre nom et votre numéro. Le PIN fidélité est créé automatiquement.",
-    loginTitle: "Connexion rapide",
-    loginBody: "Utilisez votre téléphone et votre PIN fidélité.",
+      "Entrez votre nom et votre numéro. Sur ce téléphone, vous resterez connecté automatiquement.",
+    loginTitle: "Connexion sur un nouvel appareil",
+    loginBody:
+      "Utilisez votre téléphone et votre code de secours uniquement si vous changez d’appareil.",
     loginCreateHint: "Nouveau client ?",
     registerLoginHint: "Déjà inscrit ?",
+    recoveryCodeLabel: "Code de secours",
     staffLoginTitle: "Connexion équipe",
     staffLoginBody: "Accès sécurisé pour le personnel et l’admin.",
     staffPasswordHint: "Le mot de passe est réservé à l’équipe.",
     pinHelp:
-      "Conservez ce PIN. Il permet un accès rapide sur ce téléphone sans OTP.",
+      "Gardez ce code seulement pour retrouver votre compte sur un autre téléphone. Sur ce téléphone, vous restez connecté.",
   },
   home: {
     greeting: (name: string, timeOfDay: "day" | "evening" = "day") =>
@@ -113,7 +116,8 @@ export const fr = {
     rewardTitle: "Récompense disponible",
     recentOrderTitle: "Dernière commande",
     favoriteOrderTitle: "Commande favorite",
-    pinCardTitle: "Votre PIN",
+    memberIdTitle: "ID membre",
+    memberIdHint: "À montrer au barista",
     trustCardTitle: "Niveau client",
   },
   menu: {
@@ -165,6 +169,10 @@ export const fr = {
     subtitle: "Informations rapides pour un retour sans friction.",
     logoutBody: "Déconnectez-vous seulement si nécessaire.",
     memberIdBody: "Partagez cet ID membre au barista pour retrouver votre compte plus vite.",
+    recoveryCodeTitle: "Code de secours",
+    recoveryCodeSummary: "Afficher le code de secours",
+    recoveryCodeBody:
+      "Gardez ce code seulement pour vous reconnecter sur un nouvel appareil. Il n'est pas utile au quotidien sur ce téléphone.",
   },
   history: {
     title: "Historique",

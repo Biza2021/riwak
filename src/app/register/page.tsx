@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { BrandLogo } from "@/components/brand-logo";
 import { SubmitButton } from "@/components/submit-button";
@@ -14,12 +15,22 @@ import {
 import { fr } from "@/content/fr";
 import { registerCustomerAction } from "@/lib/actions";
 import { getErrorMessage } from "@/lib/messages";
+import { getCurrentSession } from "@/lib/session";
 
 export default async function RegisterPage({
   searchParams,
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const session = await getCurrentSession({ touch: false });
+  if (session?.user.customerProfile) {
+    redirect("/app");
+  }
+
+  if (session?.user.staffUser) {
+    redirect("/staff/orders");
+  }
+
   const params = (await searchParams) ?? {};
   const error = getErrorMessage(params.error);
 

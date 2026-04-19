@@ -83,7 +83,6 @@ export async function getCurrentSession(options?: { touch?: boolean }) {
               memberId: true,
               fullName: true,
               phoneNumber: true,
-              loyaltyPin: true,
               customerType: true,
               trustReason: true,
               limitedUntil: true,

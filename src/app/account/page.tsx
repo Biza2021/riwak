@@ -1,24 +1,36 @@
-import Link from "next/link";
-
 import { CustomerBottomNav } from "@/components/navigation";
 import { PushNotificationPreferences } from "@/components/push-notification-preferences";
 import { SubmitButton } from "@/components/submit-button";
 import { Screen, Card, SectionHeader, Badge, Notice } from "@/components/ui";
 import { fr } from "@/content/fr";
 import { logoutAction } from "@/lib/actions";
-import { requireCustomerSession } from "@/lib/session";
-import { customerTypeLabel, customerTypeTone } from "@/lib/presentation";
+import { displayCustomerType } from "@/lib/domain";
 import { formatDateTime, formatMemberId } from "@/lib/format";
+import { getCustomerAccountData } from "@/lib/queries";
+import { customerTypeLabel, customerTypeTone } from "@/lib/presentation";
+import { requireCustomerSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {
   const session = await requireCustomerSession();
-  const customer = session.user.customerProfile;
+  const customerProfile = session.user.customerProfile;
+
+  if (!customerProfile) {
+    return null;
+  }
+
+  const customer = await getCustomerAccountData(customerProfile.id);
 
   if (!customer) {
     return null;
   }
+
+  const customerType = displayCustomerType({
+    customerType: customer.customerType,
+    limitedUntil: customer.limitedUntil,
+    trustedUntil: customer.trustedUntil,
+  });
 
   return (
     <>
@@ -36,12 +48,12 @@ export default async function AccountPage() {
                 <p className="text-lg font-semibold text-[#2d1b12]">{customer.fullName}</p>
                 <p className="mt-1 text-sm text-[#6d5644]">{customer.phoneNumber}</p>
               </div>
-              <Badge tone={customerTypeTone(customer.customerType)}>
-                {customerTypeLabel(customer.customerType)}
+              <Badge tone={customerTypeTone(customerType)}>
+                {customerTypeLabel(customerType)}
               </Badge>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3">
               <div className="rounded-2xl bg-[#f8f1e7] px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8b6b4c]">
                   {fr.common.memberId}
@@ -52,18 +64,10 @@ export default async function AccountPage() {
               </div>
               <div className="rounded-2xl bg-[#f8f1e7] px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8b6b4c]">
-                  {fr.common.loyaltyPin}
-                </p>
-                <p className="mt-2 text-xl font-semibold text-[#2d1b12]">
-                  {customer.loyaltyPin}
-                </p>
-              </div>
-              <div className="rounded-2xl bg-[#f8f1e7] px-4 py-3 col-span-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8b6b4c]">
                   {fr.home.trustCardTitle}
                 </p>
                 <p className="mt-2 text-xl font-semibold text-[#2d1b12]">
-                  {customerTypeLabel(customer.customerType)}
+                  {customerTypeLabel(customerType)}
                 </p>
               </div>
             </div>
@@ -71,7 +75,7 @@ export default async function AccountPage() {
             <Notice tone="blue">{fr.account.memberIdBody}</Notice>
 
             {customer.trustReason ? (
-              <Notice tone={customer.customerType === "LIMITED" ? "red" : "blue"}>
+              <Notice tone={customerType === "LIMITED" ? "red" : "blue"}>
                 {customer.trustReason}
               </Notice>
             ) : null}
@@ -80,16 +84,29 @@ export default async function AccountPage() {
               Compte créé le {formatDateTime(customer.createdAt)}
             </p>
 
+            <details className="rounded-2xl border border-[#e3d1ba] bg-[#fcf7ef] px-4 py-3 text-sm text-[#5f4634]">
+              <summary className="cursor-pointer list-none font-semibold text-[#8c6239]">
+                {fr.account.recoveryCodeSummary}
+              </summary>
+              <div className="mt-3 space-y-2">
+                <p className="text-xs uppercase tracking-[0.2em] text-[#8b6b4c]">
+                  {fr.account.recoveryCodeTitle}
+                </p>
+                <p className="text-xl font-semibold text-[#2d1b12]">
+                  {customer.loyaltyPin}
+                </p>
+                <p className="leading-6 text-[#6d5644]">
+                  {fr.account.recoveryCodeBody}
+                </p>
+              </div>
+            </details>
+
             <form action={logoutAction}>
               <SubmitButton variant="secondary" className="w-full">
                 {fr.actions.logout}
               </SubmitButton>
             </form>
           </Card>
-
-          <Link href="/rewards" className="block text-center text-sm font-semibold text-[#8c6239]">
-            {fr.navCustomer.rewards}
-          </Link>
 
           <PushNotificationPreferences
             title={fr.notifications.customer.title}

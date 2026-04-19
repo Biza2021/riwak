@@ -8,7 +8,7 @@ import { LOYALTY_STAMP_THRESHOLD } from "@/lib/domain";
 import { getCustomerRewardsData } from "@/lib/queries";
 import { requireCustomerSession } from "@/lib/session";
 import { redeemRewardAction } from "@/lib/actions";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatMemberId } from "@/lib/format";
 import { customerTypeLabel, customerTypeTone } from "@/lib/presentation";
 
 export const dynamic = "force-dynamic";
@@ -66,7 +66,10 @@ export default async function RewardsPage() {
             <div className="rounded-2xl bg-[#fff6e8] p-4 text-sm leading-6 text-[#6d5644]">
               <p>{fr.rewards.subtitle}</p>
               <p className="mt-1">
-                PIN: <span className="font-semibold text-[#2d1b12]">{customer.loyaltyPin}</span>
+                {fr.common.memberId}:{" "}
+                <span className="font-semibold text-[#2d1b12]">
+                  {formatMemberId(customer.memberId)}
+                </span>
               </p>
             </div>
           </Card>

@@ -193,6 +193,26 @@ export async function getCustomerById(customerId: string) {
   });
 }
 
+export async function getCustomerAccountData(customerId: string) {
+  await expireOverdueOrders();
+
+  return prisma.customerProfile.findUnique({
+    where: { id: customerId },
+    select: {
+      id: true,
+      memberId: true,
+      fullName: true,
+      phoneNumber: true,
+      loyaltyPin: true,
+      customerType: true,
+      trustReason: true,
+      limitedUntil: true,
+      trustedUntil: true,
+      createdAt: true,
+    },
+  });
+}
+
 export async function getCustomerHomeData(customerId: string) {
   await expireOverdueOrders();
 
@@ -201,7 +221,7 @@ export async function getCustomerHomeData(customerId: string) {
     select: {
       id: true,
       fullName: true,
-      loyaltyPin: true,
+      memberId: true,
       customerType: true,
       limitedUntil: true,
       trustedUntil: true,
@@ -404,7 +424,7 @@ export async function getCustomerRewardsData(customerId: string) {
       id: true,
       fullName: true,
       phoneNumber: true,
-      loyaltyPin: true,
+      memberId: true,
       customerType: true,
       limitedUntil: true,
       trustedUntil: true,
@@ -609,7 +629,6 @@ export async function getStaffCustomerDetail(customerId: string) {
       fullName: true,
       phoneNumber: true,
       memberId: true,
-      loyaltyPin: true,
       customerType: true,
       limitedUntil: true,
       trustedUntil: true,

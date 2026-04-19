@@ -52,19 +52,11 @@ export default async function StaffCustomerDetailPage({
 
           <Card className="space-y-4 p-5">
             <div className="flex items-start justify-between gap-3">
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm font-semibold text-[#8c6239]">{fr.common.memberId}</p>
-                  <p className="mt-1 text-lg font-semibold text-[#2d1b12]">
-                    {formatMemberId(customer.memberId)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-[#8c6239]">{fr.common.loyaltyPin}</p>
-                  <p className="mt-1 text-lg font-semibold text-[#2d1b12]">
-                    {customer.loyaltyPin}
-                  </p>
-                </div>
+              <div>
+                <p className="text-sm font-semibold text-[#8c6239]">{fr.common.memberId}</p>
+                <p className="mt-1 text-lg font-semibold text-[#2d1b12]">
+                  {formatMemberId(customer.memberId)}
+                </p>
               </div>
               <Badge tone={customerTypeTone(customer.customerType)}>
                 {customerTypeLabel(customer.customerType)}

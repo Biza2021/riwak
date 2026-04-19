@@ -18,11 +18,10 @@ import { LOYALTY_STAMP_THRESHOLD } from "@/lib/domain";
 import { getCustomerHomeData } from "@/lib/queries";
 import { requireCustomerSession } from "@/lib/session";
 import {
-  customerTypeLabel,
   orderStatusLabel,
   orderStatusTone,
 } from "@/lib/presentation";
-import { formatDateTime, formatTimeOnly } from "@/lib/format";
+import { formatDateTime, formatMemberId, formatTimeOnly } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -115,9 +114,9 @@ export default async function CustomerHomePage() {
               tone="gold"
             />
             <MetricCard
-              title={fr.home.pinCardTitle}
-              value={customer.loyaltyPin}
-              detail={customerTypeLabel(customer.customerType)}
+              title={fr.home.memberIdTitle}
+              value={formatMemberId(customer.memberId)}
+              detail={fr.home.memberIdHint}
               tone="blue"
             />
           </div>
