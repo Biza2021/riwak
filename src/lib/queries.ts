@@ -629,6 +629,7 @@ export async function getStaffCustomerDetail(customerId: string) {
       fullName: true,
       phoneNumber: true,
       memberId: true,
+      loyaltyPin: true,
       customerType: true,
       limitedUntil: true,
       trustedUntil: true,

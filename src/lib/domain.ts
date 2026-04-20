@@ -1,4 +1,4 @@
-export const LOYALTY_STAMP_THRESHOLD = 8;
+export const LOYALTY_STAMP_THRESHOLD = 5;
 
 export const PICKUP_OPTIONS = [0, 10, 15, 20] as const;
 export type PickupOptionMinutes = (typeof PICKUP_OPTIONS)[number];

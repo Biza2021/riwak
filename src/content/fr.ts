@@ -9,6 +9,7 @@ export const fr = {
     register: "Créer mon compte",
     login: "Se connecter",
     logout: "Se déconnecter",
+    addCustomer: "Ajouter un client",
     orderNow: "Commander maintenant",
     viewOrder: "Voir la commande",
     viewProfile: "Fiche",
@@ -33,6 +34,7 @@ export const fr = {
     useReward: "Utiliser récompense",
     addOneStamp: "+1 tampon",
     addTwoStamps: "+2 tampons",
+    prepareSms: "Préparer le SMS",
   },
   common: {
     loading: "Chargement…",
@@ -156,7 +158,7 @@ export const fr = {
   },
   rewards: {
     title: "Récompenses",
-    subtitle: "8 achats qualifiants = 1 boisson offerte.",
+    subtitle: "5 achats qualifiants = 1 boisson offerte.",
     unlockedTitle: "Boisson offerte débloquée",
     unlockedBody: "Votre crédit est stocké dans le compte et peut être utilisé plus tard.",
     available: "Disponible",
@@ -184,6 +186,24 @@ export const fr = {
     queueSubtitle: "Les nouvelles commandes doivent rester visibles et simples à traiter.",
     detailTitle: "Détail commande",
     customerTitle: "Fiche client",
+    customerCreateTitle: "Ajouter un client",
+    customerCreateBody:
+      "Créez une fiche fidélité immédiatement, même si le client n’a pas son téléphone avec lui.",
+    customerCreateSuccess: (name: string, memberId: string) =>
+      `${name} a été ajouté avec l’ID membre ${memberId}.`,
+    customerCreateSmsHint:
+      "Optionnel : préparez un SMS pour que le client retrouve facilement son compte plus tard.",
+    customerCreateDetailAction: "Ouvrir la fiche",
+    recoveryCodeTitle: "Code de secours",
+    recoveryCodeBody:
+      "À transmettre seulement si le client veut ouvrir son compte sur un nouvel appareil.",
+    customerSmsMessage: (
+      name: string,
+      loginUrl: string,
+      recoveryCode: string,
+      memberId: string,
+    ) =>
+      `Bonjour ${name}, votre compte fidélité Riwak est prêt. Ouvrez l’app ici : ${loginUrl}. Connectez-vous avec votre numéro de téléphone et ce code de secours : ${recoveryCode}. Votre ID membre : ${memberId}.`,
     trustTitle: "Gestion du niveau de confiance",
     loyaltyTitle: "Vue fidélité",
     settingsTitle: "Réglages boutique",

@@ -26,6 +26,7 @@ import {
   sendCustomerRewardEarnedNotification,
   sendStaffNewOrderNotification,
 } from "./push-notifications";
+import type { StaffCustomerCardSnapshot } from "./staff-customers";
 import {
   deleteVoiceNote,
   isVoiceNoteStorageError,
@@ -43,6 +44,11 @@ const customerLoginSchema = z.object({
   phoneNumber: z.string().trim().min(6).max(24),
   loyaltyPin: z.string().trim().length(6),
   redirectTo: z.string().optional(),
+});
+
+const staffCreateCustomerSchema = z.object({
+  fullName: z.string().trim().min(2).max(80),
+  phoneNumber: z.string().trim().min(6).max(24),
 });
 
 const staffLoginSchema = z.object({
@@ -197,32 +203,38 @@ type StaffCustomerLoyaltyActionResult =
       error: string;
     };
 
-export async function registerCustomerAction(formData: FormData) {
-  const payload = customerRegisterSchema.safeParse({
-    fullName: formText(formData, "fullName"),
-    phoneNumber: formText(formData, "phoneNumber"),
-    redirectTo: formText(formData, "redirectTo") || undefined,
-  });
+type StaffCreateCustomerActionResult =
+  | {
+      ok: true;
+      customer: StaffCustomerCardSnapshot;
+      recoveryCode: string;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
 
-  if (!payload.success) {
-    redirectWithError("/login", "BAD_FORM");
-  }
+type CreatedCustomerAccount = {
+  userId: string;
+  customer: {
+    id: string;
+    memberId: number;
+    fullName: string;
+    phoneNumber: string;
+    loyaltyPin: string;
+    customerType: StaffCustomerCardSnapshot["customerType"];
+  };
+};
 
-  const fullName = payload.data.fullName;
-  const phoneNumber = normalizeCustomerPhone(payload.data.phoneNumber);
+async function createCustomerAccount(params: {
+  fullName: string;
+  phoneNumber: string;
+}): Promise<CreatedCustomerAccount> {
+  const phoneNumber = normalizeCustomerPhone(params.phoneNumber);
+
   if (!phoneNumber) {
-    redirectWithError("/register", "BAD_PHONE");
+    throw new ActionConflictError("BAD_PHONE");
   }
-
-  const existingCustomer = await prisma.customerProfile.findUnique({
-    where: { phoneNumber },
-  });
-
-  if (existingCustomer) {
-    redirectWithError("/register", "PHONE_EXISTS");
-  }
-
-  let userId: string | null = null;
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
@@ -231,7 +243,7 @@ export async function registerCustomerAction(formData: FormData) {
           role: "CUSTOMER",
           customerProfile: {
             create: {
-              fullName,
+              fullName: params.fullName,
               phoneNumber,
               loyaltyPin: generateLoyaltyPin(),
               customerType: "NEW",
@@ -247,14 +259,30 @@ export async function registerCustomerAction(formData: FormData) {
         },
         select: {
           id: true,
+          customerProfile: {
+            select: {
+              id: true,
+              memberId: true,
+              fullName: true,
+              phoneNumber: true,
+              loyaltyPin: true,
+              customerType: true,
+            },
+          },
         },
       });
 
-      userId = user.id;
-      break;
+      if (!user.customerProfile) {
+        throw new Error("CUSTOMER_PROFILE_MISSING");
+      }
+
+      return {
+        userId: user.id,
+        customer: user.customerProfile,
+      };
     } catch (error) {
       if (isUniqueConstraintError(error, "phoneNumber")) {
-        redirectWithError("/register", "PHONE_EXISTS");
+        throw new ActionConflictError("PHONE_EXISTS");
       }
 
       if (isUniqueConstraintError(error, "loyaltyPin")) {
@@ -265,14 +293,81 @@ export async function registerCustomerAction(formData: FormData) {
     }
   }
 
-  if (!userId) {
-    redirectWithError("/register", "UNKNOWN");
+  throw new ActionConflictError("UNKNOWN");
+}
+
+export async function registerCustomerAction(formData: FormData) {
+  const payload = customerRegisterSchema.safeParse({
+    fullName: formText(formData, "fullName"),
+    phoneNumber: formText(formData, "phoneNumber"),
+    redirectTo: formText(formData, "redirectTo") || undefined,
+  });
+
+  if (!payload.success) {
+    redirectWithError("/login", "BAD_FORM");
   }
 
-  await createSession(userId);
+  let created: CreatedCustomerAccount;
+
+  try {
+    created = await createCustomerAccount({
+      fullName: payload.data.fullName,
+      phoneNumber: payload.data.phoneNumber,
+    });
+  } catch (error) {
+    if (error instanceof ActionConflictError) {
+      redirectWithError("/register", error.code);
+    }
+
+    throw error;
+  }
+
+  await createSession(created.userId);
   revalidatePath("/");
   revalidatePath("/app");
   redirect(safePath(payload.data.redirectTo, "/app?setup=1"));
+}
+
+export async function createStaffCustomerAction(input: {
+  fullName: string;
+  phoneNumber: string;
+}): Promise<StaffCreateCustomerActionResult> {
+  await requireStaffSession();
+  const payload = staffCreateCustomerSchema.safeParse(input);
+
+  if (!payload.success) {
+    return { ok: false, error: "BAD_FORM" };
+  }
+
+  try {
+    const created = await createCustomerAccount(payload.data);
+
+    revalidatePath("/staff/customers");
+    revalidatePath(`/staff/customers/${created.customer.id}`);
+    revalidatePath("/login");
+
+    return {
+      ok: true,
+      customer: {
+        id: created.customer.id,
+        memberId: created.customer.memberId,
+        fullName: created.customer.fullName,
+        phoneNumber: created.customer.phoneNumber,
+        customerType: created.customer.customerType,
+        currentStampCount: 0,
+        lifetimeStampCount: 0,
+        availableFreeDrinks: 0,
+        lastOrderAt: null,
+      },
+      recoveryCode: created.customer.loyaltyPin,
+    };
+  } catch (error) {
+    if (error instanceof ActionConflictError) {
+      return { ok: false, error: error.code };
+    }
+
+    throw error;
+  }
 }
 
 export async function customerLoginAction(formData: FormData) {

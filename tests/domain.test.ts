@@ -136,9 +136,9 @@ describe("order rules", () => {
 });
 
 describe("loyalty rules", () => {
-  it("increments stamps and unlocks a reward at 8", () => {
+  it("increments stamps and unlocks a reward at 5", () => {
     const result = applyLoyaltyPurchase({
-      currentStampCount: 7,
+      currentStampCount: 4,
       lifetimeStampCount: 15,
       availableFreeDrinks: 0,
       stampsEarned: 1,

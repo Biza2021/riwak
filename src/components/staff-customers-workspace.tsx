@@ -11,12 +11,13 @@ import {
   useTransition,
 } from "react";
 
+import { BrandLogo } from "@/components/brand-logo";
+import { fr } from "@/content/fr";
 import {
+  createStaffCustomerAction,
   quickAddCustomerStampsAction,
   quickRedeemCustomerRewardAction,
 } from "@/lib/actions";
-import { BrandLogo } from "@/components/brand-logo";
-import { fr } from "@/content/fr";
 import { filterStaffCustomers } from "@/lib/customer-lookup";
 import {
   applyLoyaltyPurchase,
@@ -24,15 +25,13 @@ import {
   redeemRewardState,
 } from "@/lib/domain";
 import { formatDateTime, formatMemberId } from "@/lib/format";
-import {
-  customerTypeLabel,
-  customerTypeTone,
-} from "@/lib/presentation";
+import { customerTypeLabel, customerTypeTone } from "@/lib/presentation";
 import type { StaffCustomerCardSnapshot } from "@/lib/staff-customers";
 import {
   Badge,
   Card,
   EmptyState,
+  FieldLabel,
   Notice,
   PrimaryButton,
   SecondaryButton,
@@ -74,6 +73,28 @@ function applyServerSnapshot(
     lifetimeStampCount: nextState.lifetimeStampCount,
     availableFreeDrinks: nextState.availableFreeDrinks,
   };
+}
+
+type CreatedCustomerState = {
+  id: string;
+  memberId: number;
+  fullName: string;
+  phoneNumber: string;
+  recoveryCode: string;
+};
+
+function buildCustomerSmsMessage(createdCustomer: CreatedCustomerState) {
+  return fr.staff.customerSmsMessage(
+    createdCustomer.fullName,
+    `${window.location.origin}/login`,
+    createdCustomer.recoveryCode,
+    formatMemberId(createdCustomer.memberId),
+  );
+}
+
+function openCustomerSmsComposer(createdCustomer: CreatedCustomerState) {
+  const message = encodeURIComponent(buildCustomerSmsMessage(createdCustomer));
+  window.location.href = `sms:${createdCustomer.phoneNumber}?body=${message}`;
 }
 
 function CustomerActionCard({
@@ -338,8 +359,22 @@ export function StaffCustomersWorkspace({
 }: {
   initialCustomers: StaffCustomerCardSnapshot[];
 }) {
+  const router = useRouter();
   const [customers, setCustomers] = useState(initialCustomers);
   const [query, setQuery] = useState("");
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createValues, setCreateValues] = useState({
+    fullName: "",
+    phoneNumber: "",
+  });
+  const [createdCustomer, setCreatedCustomer] = useState<CreatedCustomerState | null>(
+    null,
+  );
+  const [createFeedback, setCreateFeedback] = useState<{
+    tone: "green" | "red";
+    message: string;
+  } | null>(null);
+  const [isCreatePending, startCreateTransition] = useTransition();
   const deferredQuery = useDeferredValue(query);
 
   useEffect(() => {
@@ -362,6 +397,74 @@ export function StaffCustomersWorkspace({
     );
   }
 
+  function prependCustomer(customer: StaffCustomerCardSnapshot) {
+    setCustomers((currentCustomers) => {
+      const withoutExisting = currentCustomers.filter(
+        (currentCustomer) => currentCustomer.id !== customer.id,
+      );
+
+      return [customer, ...withoutExisting];
+    });
+  }
+
+  function handleCreateCustomer() {
+    if (isCreatePending) {
+      return;
+    }
+
+    setCreateFeedback(null);
+
+    startCreateTransition(async () => {
+      try {
+        const result = await createStaffCustomerAction(createValues);
+
+        if (!result.ok) {
+          const message =
+            result.error === "BAD_PHONE"
+              ? fr.errors.BAD_PHONE
+              : result.error === "PHONE_EXISTS"
+                ? fr.errors.PHONE_EXISTS
+                : result.error === "BAD_FORM"
+                  ? fr.errors.BAD_FORM
+                  : fr.errors.UNKNOWN;
+
+          setCreateFeedback({
+            tone: "red",
+            message,
+          });
+          return;
+        }
+
+        prependCustomer(result.customer);
+        setQuery("");
+        setShowCreateForm(false);
+        setCreateValues({
+          fullName: "",
+          phoneNumber: "",
+        });
+        setCreatedCustomer({
+          id: result.customer.id,
+          memberId: result.customer.memberId,
+          fullName: result.customer.fullName,
+          phoneNumber: result.customer.phoneNumber,
+          recoveryCode: result.recoveryCode,
+        });
+        setCreateFeedback({
+          tone: "green",
+          message: fr.staff.customerCreateSuccess(
+            result.customer.fullName,
+            formatMemberId(result.customer.memberId),
+          ),
+        });
+      } catch {
+        setCreateFeedback({
+          tone: "red",
+          message: fr.errors.UNKNOWN,
+        });
+      }
+    });
+  }
+
   return (
     <div className="space-y-5">
       <BrandLogo variant="navbar" priority className="w-[116px] sm:w-[124px]" />
@@ -371,12 +474,25 @@ export function StaffCustomersWorkspace({
       />
 
       <Card className="space-y-3 p-4">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm font-semibold text-[#8c6239]">
             {fr.staff.customerSearchTitle}
           </p>
-          <Badge tone="blue">{filteredCustomers.length}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge tone="blue">{filteredCustomers.length}</Badge>
+            <PrimaryButton
+              type="button"
+              className="px-4"
+              onClick={() => {
+                setShowCreateForm((current) => !current);
+                setCreateFeedback(null);
+              }}
+            >
+              {fr.actions.addCustomer}
+            </PrimaryButton>
+          </div>
         </div>
+
         <TextField
           type="search"
           value={query}
@@ -384,7 +500,118 @@ export function StaffCustomersWorkspace({
           placeholder={fr.forms.customerSearchPlaceholder}
           aria-label={fr.staff.customerSearchTitle}
         />
+
+        {showCreateForm ? (
+          <div className="space-y-4 rounded-2xl bg-[#f8f1e7] p-4">
+            <div className="space-y-1.5">
+              <p className="text-sm font-semibold text-[#8c6239]">
+                {fr.staff.customerCreateTitle}
+              </p>
+              <p className="text-sm leading-6 text-[#6d5644]">
+                {fr.staff.customerCreateBody}
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <FieldLabel>{fr.common.fullName}</FieldLabel>
+                <TextField
+                  value={createValues.fullName}
+                  onChange={(event) =>
+                    setCreateValues((current) => ({
+                      ...current,
+                      fullName: event.target.value,
+                    }))
+                  }
+                  placeholder={fr.forms.namePlaceholder}
+                  autoComplete="name"
+                />
+              </div>
+              <div>
+                <FieldLabel>{fr.common.phoneNumber}</FieldLabel>
+                <TextField
+                  type="tel"
+                  value={createValues.phoneNumber}
+                  onChange={(event) =>
+                    setCreateValues((current) => ({
+                      ...current,
+                      phoneNumber: event.target.value,
+                    }))
+                  }
+                  placeholder={fr.forms.phonePlaceholder}
+                  autoComplete="tel"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <PrimaryButton
+                type="button"
+                disabled={isCreatePending}
+                onClick={handleCreateCustomer}
+              >
+                <InlineActionLabel
+                  pending={isCreatePending}
+                  label={fr.actions.addCustomer}
+                />
+              </PrimaryButton>
+              <SecondaryButton
+                type="button"
+                disabled={isCreatePending}
+                onClick={() => {
+                  setShowCreateForm(false);
+                  setCreateFeedback(null);
+                }}
+              >
+                {fr.actions.cancel}
+              </SecondaryButton>
+            </div>
+          </div>
+        ) : null}
+
+        {createFeedback ? <Notice tone={createFeedback.tone}>{createFeedback.message}</Notice> : null}
       </Card>
+
+      {createdCustomer ? (
+        <Card className="space-y-4 p-4">
+          <div className="space-y-1.5">
+            <p className="text-sm font-semibold text-[#8c6239]">
+              {fr.staff.customerCreateTitle}
+            </p>
+            <p className="text-sm leading-6 text-[#6d5644]">
+              {fr.staff.customerCreateSmsHint}
+            </p>
+          </div>
+
+          <Notice tone="green">
+            {fr.staff.customerCreateSuccess(
+              createdCustomer.fullName,
+              formatMemberId(createdCustomer.memberId),
+            )}
+          </Notice>
+
+          <div className="flex flex-wrap gap-2">
+            <PrimaryButton
+              type="button"
+              onClick={() => openCustomerSmsComposer(createdCustomer)}
+            >
+              {fr.actions.prepareSms}
+            </PrimaryButton>
+            <SecondaryButton
+              type="button"
+              onClick={() => {
+                setQuery(String(createdCustomer.memberId));
+                router.push(`/staff/customers/${createdCustomer.id}`);
+              }}
+            >
+              {fr.staff.customerCreateDetailAction}
+            </SecondaryButton>
+            <SecondaryButton type="button" onClick={() => setCreatedCustomer(null)}>
+              {fr.actions.dismiss}
+            </SecondaryButton>
+          </div>
+        </Card>
+      ) : null}
 
       {filteredCustomers.length ? (
         <div className="space-y-3">

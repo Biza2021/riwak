@@ -89,6 +89,20 @@ export default async function StaffCustomerDetailPage({
                   .join(", ")}
               </Notice>
             ) : null}
+
+            <details className="rounded-2xl border border-[#e3d1ba] bg-[#fcf7ef] px-4 py-3 text-sm text-[#5f4634]">
+              <summary className="cursor-pointer list-none font-semibold text-[#8c6239]">
+                {fr.staff.recoveryCodeTitle}
+              </summary>
+              <div className="mt-3 space-y-2">
+                <p className="text-xl font-semibold text-[#2d1b12]">
+                  {customer.loyaltyPin}
+                </p>
+                <p className="leading-6 text-[#6d5644]">
+                  {fr.staff.recoveryCodeBody}
+                </p>
+              </div>
+            </details>
           </Card>
 
           <StaffCustomerDetailControls
