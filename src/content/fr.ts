@@ -252,6 +252,21 @@ export const fr = {
       "Sur téléphone, ajoutez Riwak à l’écran d’accueil pour une ouverture plus rapide et plus fiable dans la boutique.",
     iosHint: "Sur iPhone, utilisez le bouton Partager puis « Ajouter à l’écran d’accueil ».",
   },
+  setup: {
+    title: "Finalisez votre accès",
+    body:
+      "Deux réglages utiles pour ouvrir Riwak plus vite et recevoir les alertes importantes.",
+    installTitle: "Ajouter l’app",
+    installBody: "Gardez Riwak à portée de main sur l’écran d’accueil.",
+    installManualHint:
+      "Sur iPhone, utilisez Partager puis « Ajouter à l’écran d’accueil », puis revenez ici.",
+    installDoneAction: "C’est fait",
+    notificationsTitle: "Activer les notifications",
+    notificationsBody:
+      "Recevez une alerte quand votre commande est prête et quand une boisson offerte est débloquée.",
+    notificationsDenied:
+      "Les notifications sont bloquées sur ce navigateur. Vous pourrez les activer plus tard dans les réglages.",
+  },
   notifications: {
     enable: "Activer les notifications",
     disable: "Désactiver les notifications",

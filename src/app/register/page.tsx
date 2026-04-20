@@ -51,7 +51,7 @@ export default async function RegisterPage({
 
         <Card className="space-y-4 p-5">
           <form action={registerCustomerAction} className="space-y-4">
-            <input type="hidden" name="redirectTo" value="/app" />
+            <input type="hidden" name="redirectTo" value="/app?setup=1" />
             <div>
               <FieldLabel>{fr.common.fullName}</FieldLabel>
               <TextField

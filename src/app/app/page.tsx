@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 
 import { AutoRefresh } from "@/components/auto-refresh";
 import { BrandLogo } from "@/components/brand-logo";
+import { CustomerSetupPrompt } from "@/components/customer-setup-prompt";
 import { CustomerBottomNav } from "@/components/navigation";
-import { InstallPrompt } from "@/components/install-prompt";
 import {
   Badge,
   Card,
@@ -57,7 +57,11 @@ function bottomNav(active: string) {
   );
 }
 
-export default async function CustomerHomePage() {
+export default async function CustomerHomePage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await requireCustomerSession();
   const customerProfile = session.user.customerProfile;
 
@@ -78,6 +82,10 @@ export default async function CustomerHomePage() {
     availableFreeDrinks: 0,
   };
   const greetingTimeOfDay = resolveGreetingTimeOfDay(new Date());
+  const params = (await searchParams) ?? {};
+  const setupParam = params.setup;
+  const forceOpenSetup =
+    setupParam === "1" || (Array.isArray(setupParam) && setupParam.includes("1"));
 
   return (
     <>
@@ -88,6 +96,11 @@ export default async function CustomerHomePage() {
           <SectionHeader
             title={fr.home.greeting(customer.fullName, greetingTimeOfDay)}
             description={fr.tagline}
+          />
+
+          <CustomerSetupPrompt
+            forceOpen={forceOpenSetup}
+            vapidPublicKey={process.env.WEB_PUSH_PUBLIC_KEY ?? ""}
           />
 
           <Card className="space-y-4 p-5">
@@ -221,12 +234,6 @@ export default async function CustomerHomePage() {
               )}
             </Card>
           </div>
-
-          <InstallPrompt
-            title={fr.install.title}
-            body={fr.install.body}
-            iosHint={fr.install.iosHint}
-          />
         </div>
       </Screen>
       {bottomNav("home")}

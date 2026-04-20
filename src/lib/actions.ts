@@ -272,7 +272,7 @@ export async function registerCustomerAction(formData: FormData) {
   await createSession(userId);
   revalidatePath("/");
   revalidatePath("/app");
-  redirect(safePath(payload.data.redirectTo, "/app"));
+  redirect(safePath(payload.data.redirectTo, "/app?setup=1"));
 }
 
 export async function customerLoginAction(formData: FormData) {
