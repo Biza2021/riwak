@@ -213,6 +213,10 @@ export const fr = {
     activeUnpaidLabel: "Commande impayée active",
     customerSearchTitle: "Rechercher un client",
     customerSearchEmpty: "Aucun client ne correspond à cette recherche.",
+    logoutTitle: "Session équipe",
+    logoutBody:
+      "Déconnectez le téléphone ou la tablette partagée à la fin du service.",
+    logoutAction: "Déconnecter",
     quickStampAdded: (count: number) =>
       count === 1 ? "+1 tampon ajouté." : `+${count} tampons ajoutés.`,
     rewardRedeemed: "Récompense utilisée.",

@@ -17,6 +17,7 @@ import { requireStaffSession } from "@/lib/session";
 import {
   saveMenuItemAction,
   saveSettingsAction,
+  staffLogoutAction,
   toggleMenuItemAction,
 } from "@/lib/actions";
 import { formatCurrency } from "@/lib/format";
@@ -256,6 +257,20 @@ export default async function StaffSettingsPage({
                 </Card>
               ))}
             </div>
+          </Card>
+
+          <Card className="space-y-4 p-5">
+            <div className="space-y-1.5">
+              <p className="text-sm font-semibold text-[#8c6239]">{fr.staff.logoutTitle}</p>
+              <p className="text-sm leading-6 text-[#6d5644]">
+                {fr.staff.logoutBody}
+              </p>
+            </div>
+            <form action={staffLogoutAction}>
+              <SubmitButton variant="secondary" className="w-full">
+                {fr.staff.logoutAction}
+              </SubmitButton>
+            </form>
           </Card>
         </div>
       </Screen>

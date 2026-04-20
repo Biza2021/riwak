@@ -437,6 +437,11 @@ export async function logoutAction() {
   redirect("/");
 }
 
+export async function staffLogoutAction() {
+  await clearSession();
+  redirect("/staff/login");
+}
+
 export async function createOrderAction(formData: FormData) {
   const session = await requireCustomerSession();
   const customer = session.user.customerProfile;
