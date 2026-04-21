@@ -14,6 +14,7 @@ import {
 import { BrandLogo } from "@/components/brand-logo";
 import { fr } from "@/content/fr";
 import {
+  approveStampRequestAction,
   createStaffCustomerAction,
   quickAddCustomerStampsAction,
   quickRedeemCustomerRewardAction,
@@ -26,7 +27,11 @@ import {
 } from "@/lib/domain";
 import { formatDateTime, formatMemberId } from "@/lib/format";
 import { customerTypeLabel, customerTypeTone } from "@/lib/presentation";
-import type { StaffCustomerCardSnapshot } from "@/lib/staff-customers";
+import type {
+  StaffCustomerCardSnapshot,
+  StaffStampRequestSnapshot,
+} from "@/lib/staff-customers";
+import { cn } from "@/lib/utils";
 import {
   Badge,
   Card,
@@ -354,13 +359,134 @@ function CustomerActionCard({
   );
 }
 
+function PendingStampRequestRow({
+  request,
+  highlighted,
+  onApprove,
+  onOpen,
+}: {
+  request: StaffStampRequestSnapshot;
+  highlighted: boolean;
+  onApprove: (result: {
+    requestId: string;
+    customerId: string;
+    currentStampCount: number;
+    lifetimeStampCount: number;
+    availableFreeDrinks: number;
+  }) => void;
+  onOpen: (request: StaffStampRequestSnapshot) => void;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [feedback, setFeedback] = useState<{
+    tone: "green" | "red";
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!feedback) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setFeedback(null);
+    }, 2500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [feedback]);
+
+  function handleApprove() {
+    if (isPending) {
+      return;
+    }
+
+    setFeedback(null);
+
+    startTransition(async () => {
+      try {
+        const result = await approveStampRequestAction({
+          requestId: request.id,
+        });
+
+        if (!result.ok) {
+          setFeedback({
+            tone: "red",
+            message:
+              result.error === "ALREADY_HANDLED"
+                ? fr.staff.stampRequestHandled
+                : result.error === "NOT_FOUND"
+                  ? fr.errors.NOT_FOUND
+                  : fr.errors.UNKNOWN,
+          });
+          return;
+        }
+
+        onApprove({
+          requestId: result.requestId,
+          customerId: result.customerId,
+          currentStampCount: result.currentStampCount,
+          lifetimeStampCount: result.lifetimeStampCount,
+          availableFreeDrinks: result.availableFreeDrinks,
+        });
+        setFeedback({
+          tone: "green",
+          message: result.message,
+        });
+      } catch {
+        setFeedback({
+          tone: "red",
+          message: fr.errors.UNKNOWN,
+        });
+      }
+    });
+  }
+
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border border-[#e4d2bb] bg-[#fff8ef] p-4 transition",
+        highlighted ? "ring-2 ring-[#d8b36f]/35" : "",
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="font-semibold text-[#2d1b12]">{request.customerName}</p>
+          <p className="text-sm text-[#6d5644]">{formatMemberId(request.memberId)}</p>
+          <p className="text-xs text-[#7a6350]">{formatDateTime(request.createdAt)}</p>
+        </div>
+        <Badge tone="blue">{fr.staff.stampRequestPending}</Badge>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <PrimaryButton type="button" disabled={isPending} onClick={handleApprove}>
+          <InlineActionLabel
+            pending={isPending}
+            label={fr.staff.stampRequestApprove}
+          />
+        </PrimaryButton>
+        <SecondaryButton type="button" onClick={() => onOpen(request)}>
+          {fr.staff.customerCreateDetailAction}
+        </SecondaryButton>
+      </div>
+
+      {feedback ? <div className="mt-3"><Notice tone={feedback.tone}>{feedback.message}</Notice></div> : null}
+    </div>
+  );
+}
+
 export function StaffCustomersWorkspace({
   initialCustomers,
+  initialPendingStampRequests,
+  highlightedStampRequestId,
 }: {
   initialCustomers: StaffCustomerCardSnapshot[];
+  initialPendingStampRequests: StaffStampRequestSnapshot[];
+  highlightedStampRequestId?: string;
 }) {
   const router = useRouter();
   const [customers, setCustomers] = useState(initialCustomers);
+  const [pendingStampRequests, setPendingStampRequests] = useState(
+    initialPendingStampRequests,
+  );
   const [query, setQuery] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createValues, setCreateValues] = useState({
@@ -380,6 +506,10 @@ export function StaffCustomersWorkspace({
   useEffect(() => {
     setCustomers(initialCustomers);
   }, [initialCustomers]);
+
+  useEffect(() => {
+    setPendingStampRequests(initialPendingStampRequests);
+  }, [initialPendingStampRequests]);
 
   const filteredCustomers = useMemo(
     () => filterStaffCustomers(customers, deferredQuery),
@@ -405,6 +535,34 @@ export function StaffCustomersWorkspace({
 
       return [customer, ...withoutExisting];
     });
+  }
+
+  function removePendingStampRequest(requestId: string) {
+    setPendingStampRequests((currentRequests) =>
+      currentRequests.filter((request) => request.id !== requestId),
+    );
+  }
+
+  function handleApprovePendingRequest(result: {
+    requestId: string;
+    customerId: string;
+    currentStampCount: number;
+    lifetimeStampCount: number;
+    availableFreeDrinks: number;
+  }) {
+    removePendingStampRequest(result.requestId);
+    router.replace("/staff/customers", { scroll: false });
+    updateCustomer(result.customerId, (currentCustomer) => ({
+      ...currentCustomer,
+      currentStampCount: result.currentStampCount,
+      lifetimeStampCount: result.lifetimeStampCount,
+      availableFreeDrinks: result.availableFreeDrinks,
+    }));
+  }
+
+  function openPendingRequest(request: StaffStampRequestSnapshot) {
+    setQuery(String(request.memberId));
+    router.push(`/staff/customers/${request.customerId}`);
   }
 
   function handleCreateCustomer() {
@@ -571,6 +729,34 @@ export function StaffCustomersWorkspace({
 
         {createFeedback ? <Notice tone={createFeedback.tone}>{createFeedback.message}</Notice> : null}
       </Card>
+
+      {pendingStampRequests.length ? (
+        <Card className="space-y-4 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-[#8c6239]">
+                {fr.staff.stampRequestTitle}
+              </p>
+              <p className="mt-1 text-sm leading-6 text-[#6d5644]">
+                {fr.staff.stampRequestBody}
+              </p>
+            </div>
+            <Badge tone="blue">{pendingStampRequests.length}</Badge>
+          </div>
+
+          <div className="space-y-3">
+            {pendingStampRequests.map((request) => (
+              <PendingStampRequestRow
+                key={request.id}
+                request={request}
+                highlighted={request.id === highlightedStampRequestId}
+                onApprove={handleApprovePendingRequest}
+                onOpen={openPendingRequest}
+              />
+            ))}
+          </div>
+        </Card>
+      ) : null}
 
       {createdCustomer ? (
         <Card className="space-y-4 p-4">

@@ -4,6 +4,7 @@ import {
   buildCustomerOrderReadyNotification,
   buildCustomerRewardEarnedNotification,
   buildStaffNewOrderNotification,
+  buildStaffStampRequestNotification,
 } from "../src/lib/push-notification-payloads";
 
 describe("push notification payloads", () => {
@@ -22,6 +23,36 @@ describe("push notification payloads", () => {
       url: "/staff/orders/ord_123",
       tag: "staff-order-ord_123",
     });
+  });
+
+  it("builds the staff stamp-request notification payload", () => {
+    const payload = buildStaffStampRequestNotification({
+      requestId: "req_123",
+      customerId: "cus_456",
+      customerName: "Ismail",
+      memberId: 7,
+    });
+
+    expect(payload).toMatchObject({
+      kind: "STAFF_STAMP_REQUEST",
+      eventKey: "staff:stamp-request:req_123",
+      title: "Demande de tampon",
+      body: "Ismail · #0007",
+      url: "/staff/customers?stampRequest=req_123",
+      tag: "staff-stamp-request-req_123",
+      data: {
+        stampRequestId: "req_123",
+        customerId: "cus_456",
+        approvalUrl: "/api/staff/stamp-requests/req_123/approve",
+      },
+    });
+
+    expect(payload.actions).toEqual([
+      {
+        action: "approve-stamp-request",
+        title: "Approuver",
+      },
+    ]);
   });
 
   it("builds the customer order-ready notification payload", () => {

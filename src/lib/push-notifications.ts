@@ -6,6 +6,7 @@ import {
   buildCustomerOrderReadyNotification,
   buildCustomerRewardEarnedNotification,
   buildStaffNewOrderNotification,
+  buildStaffStampRequestNotification,
   type PushNotificationPayload,
 } from "./push-notification-payloads";
 
@@ -73,6 +74,8 @@ function toPushMessage(payload: PushNotificationPayload) {
     tag: payload.tag,
     icon: NOTIFICATION_ICON,
     badge: NOTIFICATION_BADGE,
+    actions: payload.actions ?? [],
+    data: payload.data ?? {},
   });
 }
 
@@ -228,6 +231,29 @@ export async function sendStaffNewOrderNotification(input: {
   });
 
   const payload = buildStaffNewOrderNotification(input);
+  await sendPayloadToSubscriptions(subscriptions, payload);
+}
+
+export async function sendStaffStampRequestNotification(input: {
+  requestId: string;
+  customerId: string;
+  customerName: string;
+  memberId: number;
+}) {
+  const subscriptions = await loadSubscriptions({
+    user: {
+      role: {
+        in: ["STAFF", "ADMIN"],
+      },
+      staffUser: {
+        is: {
+          active: true,
+        },
+      },
+    },
+  });
+
+  const payload = buildStaffStampRequestNotification(input);
   await sendPayloadToSubscriptions(subscriptions, payload);
 }
 

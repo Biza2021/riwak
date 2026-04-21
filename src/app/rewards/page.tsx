@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { CustomerStampRequestCard } from "@/components/customer-stamp-request-card";
 import { CustomerBottomNav } from "@/components/navigation";
 import { SubmitButton } from "@/components/submit-button";
 import { Screen, Card, SectionHeader, Badge, MetricCard, EmptyState, SecondaryButton } from "@/components/ui";
@@ -27,6 +28,12 @@ export default async function RewardsPage() {
     availableFreeDrinks: 0,
   };
   const availableRewards = customer.rewards.filter((reward) => reward.status === "AVAILABLE");
+  const pendingStampRequest = customer.stampRequests[0]
+    ? {
+        id: customer.stampRequests[0].id,
+        createdAt: customer.stampRequests[0].createdAt.toISOString(),
+      }
+    : null;
 
   return (
     <>
@@ -73,6 +80,8 @@ export default async function RewardsPage() {
               </p>
             </div>
           </Card>
+
+          <CustomerStampRequestCard initialPendingRequest={pendingStampRequest} />
 
           {availableRewards.length ? (
             <Card className="space-y-4 p-5">

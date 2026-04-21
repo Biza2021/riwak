@@ -437,6 +437,19 @@ export async function getCustomerRewardsData(customerId: string) {
           createdAt: true,
         },
       },
+      stampRequests: {
+        where: {
+          status: "PENDING",
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: 1,
+        select: {
+          id: true,
+          createdAt: true,
+        },
+      },
       loyaltyEvents: {
         orderBy: { createdAt: "desc" },
         take: 20,
@@ -587,36 +600,60 @@ export async function getStaffQueueData(
 export async function getStaffCustomersData() {
   await expireOverdueOrders();
 
-  const customers = await prisma.customerProfile.findMany({
-    orderBy: [{ updatedAt: "desc" }],
-    select: {
-      id: true,
-      memberId: true,
-      fullName: true,
-      phoneNumber: true,
-      customerType: true,
-      limitedUntil: true,
-      trustedUntil: true,
-      lastOrderAt: true,
-      loyaltyAccount: true,
-      orders: {
-        orderBy: { placedAt: "desc" },
-        take: 1,
-        select: {
-          placedAt: true,
+  const [customers, pendingStampRequests] = await prisma.$transaction([
+    prisma.customerProfile.findMany({
+      orderBy: [{ updatedAt: "desc" }],
+      select: {
+        id: true,
+        memberId: true,
+        fullName: true,
+        phoneNumber: true,
+        customerType: true,
+        limitedUntil: true,
+        trustedUntil: true,
+        lastOrderAt: true,
+        loyaltyAccount: true,
+        orders: {
+          orderBy: { placedAt: "desc" },
+          take: 1,
+          select: {
+            placedAt: true,
+          },
         },
       },
-    },
-  });
-
-  return customers.map((customer) => ({
-    ...customer,
-    customerType: displayCustomerType({
-      customerType: customer.customerType,
-      limitedUntil: customer.limitedUntil,
-      trustedUntil: customer.trustedUntil,
     }),
-  }));
+    prisma.stampRequest.findMany({
+      where: {
+        status: "PENDING",
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        customerId: true,
+        createdAt: true,
+        customer: {
+          select: {
+            memberId: true,
+            fullName: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  return {
+    customers: customers.map((customer) => ({
+      ...customer,
+      customerType: displayCustomerType({
+        customerType: customer.customerType,
+        limitedUntil: customer.limitedUntil,
+        trustedUntil: customer.trustedUntil,
+      }),
+    })),
+    pendingStampRequests,
+  };
 }
 
 export async function getStaffCustomerDetail(customerId: string) {

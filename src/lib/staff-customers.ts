@@ -12,6 +12,14 @@ export type StaffCustomerCardSnapshot = {
   lastOrderAt: string | null;
 };
 
+export type StaffStampRequestSnapshot = {
+  id: string;
+  customerId: string;
+  customerName: string;
+  memberId: number;
+  createdAt: string;
+};
+
 type RawStaffCustomer = {
   id: string;
   memberId: number;
@@ -27,6 +35,16 @@ type RawStaffCustomer = {
   orders: Array<{
     placedAt: Date;
   }>;
+};
+
+type RawStaffStampRequest = {
+  id: string;
+  customerId: string;
+  createdAt: Date;
+  customer: {
+    memberId: number;
+    fullName: string;
+  };
 };
 
 export function serializeStaffCustomers(
@@ -45,5 +63,17 @@ export function serializeStaffCustomers(
       customer.lastOrderAt?.toISOString() ??
       customer.orders[0]?.placedAt.toISOString() ??
       null,
+  }));
+}
+
+export function serializeStaffStampRequests(
+  requests: RawStaffStampRequest[],
+): StaffStampRequestSnapshot[] {
+  return requests.map((request) => ({
+    id: request.id,
+    customerId: request.customerId,
+    customerName: request.customer.fullName,
+    memberId: request.customer.memberId,
+    createdAt: request.createdAt.toISOString(),
   }));
 }

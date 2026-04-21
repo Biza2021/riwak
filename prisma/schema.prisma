@@ -48,6 +48,7 @@ enum LoyaltyEventType {
 
 enum NotificationKind {
   STAFF_NEW_ORDER
+  STAFF_STAMP_REQUEST
   CUSTOMER_ORDER_READY
   CUSTOMER_REWARD_EARNED
 }
@@ -64,6 +65,11 @@ enum OrderRiskState {
   RETURNING
   TRUSTED
   LIMITED
+}
+
+enum StampRequestStatus {
+  PENDING
+  APPROVED
 }
 
 model User {
@@ -97,6 +103,7 @@ model CustomerProfile {
   orders        Order[]
   loyaltyEvents LoyaltyStampEvent[]
   rewards       Reward[]
+  stampRequests StampRequest[]
   trustEvents   CustomerTrustEvent[]
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
@@ -110,6 +117,7 @@ model StaffUser {
   email         String             @unique
   passwordHash  String
   active        Boolean            @default(true)
+  approvedStampRequests StampRequest[]
   trustEvents   CustomerTrustEvent[]
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
@@ -240,10 +248,29 @@ model LoyaltyStampEvent {
   type        LoyaltyEventType
   stampDelta  Int
   notes       String?
+  stampRequest StampRequest?
   createdAt   DateTime          @default(now())
 
   @@index([customerId])
   @@index([orderId])
+}
+
+model StampRequest {
+  id                  String             @id @default(cuid())
+  customerId          String
+  customer            CustomerProfile    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  status              StampRequestStatus @default(PENDING)
+  resolvedAt          DateTime?
+  resolvedByStaffUserId String?
+  resolvedByStaffUser StaffUser?         @relation(fields: [resolvedByStaffUserId], references: [id], onDelete: SetNull)
+  loyaltyEventId      String?            @unique
+  loyaltyEvent        LoyaltyStampEvent? @relation(fields: [loyaltyEventId], references: [id], onDelete: SetNull)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@index([customerId, status, createdAt])
+  @@index([status, createdAt])
+  @@index([resolvedByStaffUserId])
 }
 
 model Reward {

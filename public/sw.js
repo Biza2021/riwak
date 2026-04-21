@@ -1,4 +1,4 @@
-const CACHE_NAME = "riwak-v7";
+const CACHE_NAME = "riwak-v8";
 const CORE_URLS = [
   "/",
   "/register",
@@ -120,23 +120,23 @@ self.addEventListener("push", (event) => {
       icon: payload.icon ?? "/pwa/riwak-192.png?v=2026-04-17-appicon",
       badge: payload.badge ?? "/brand/riwak-icon-only.png?v=2026-04-17-transparent",
       tag: payload.tag ?? undefined,
+      actions: Array.isArray(payload.actions) ? payload.actions : [],
       data: {
         url: payload.url ?? "/",
+        approvalUrl: payload.data?.approvalUrl ?? "",
+        stampRequestId: payload.data?.stampRequestId ?? "",
+        customerId: payload.data?.customerId ?? "",
       },
     }),
   );
 });
 
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
+function openNotificationTarget(targetPath) {
+  const targetUrl = new URL(targetPath ?? "/", self.location.origin).href;
 
-  const targetUrl = new URL(
-    event.notification.data?.url ?? "/",
-    self.location.origin,
-  ).href;
-
-  event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+  return self.clients
+    .matchAll({ type: "window", includeUncontrolled: true })
+    .then((clients) => {
       const existingClient = clients[0];
 
       if (existingClient) {
@@ -148,6 +148,35 @@ self.addEventListener("notificationclick", (event) => {
       }
 
       return self.clients.openWindow(targetUrl);
-    }),
-  );
+    });
+}
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const fallbackUrl = event.notification.data?.url ?? "/";
+  const approvalUrl = event.notification.data?.approvalUrl ?? "";
+
+  if (event.action === "approve-stamp-request" && approvalUrl) {
+    event.waitUntil(
+      fetch(approvalUrl, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+        .then(async (response) => {
+          if (!response.ok) {
+            return openNotificationTarget(fallbackUrl);
+          }
+
+          const payload = await response.json().catch(() => null);
+          return openNotificationTarget(payload?.redirectUrl ?? fallbackUrl);
+        })
+        .catch(() => openNotificationTarget(fallbackUrl)),
+    );
+    return;
+  }
+
+  event.waitUntil(openNotificationTarget(fallbackUrl));
 });

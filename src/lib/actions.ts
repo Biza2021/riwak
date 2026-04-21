@@ -25,8 +25,14 @@ import {
   sendCustomerOrderReadyNotification,
   sendCustomerRewardEarnedNotification,
   sendStaffNewOrderNotification,
+  sendStaffStampRequestNotification,
 } from "./push-notifications";
 import type { StaffCustomerCardSnapshot } from "./staff-customers";
+import {
+  approveStampRequest,
+  createStampRequestForCustomer,
+  type CustomerStampRequestSnapshot,
+} from "./stamp-requests";
 import {
   deleteVoiceNote,
   isVoiceNoteStorageError,
@@ -112,6 +118,10 @@ const quickRewardSchema = z.object({
   customerId: z.string().min(1),
 });
 
+const stampRequestSchema = z.object({
+  requestId: z.string().min(1),
+});
+
 const rewardRedeemSchema = z.object({
   rewardId: z.string().min(1).optional(),
   returnTo: z.string().optional(),
@@ -156,6 +166,15 @@ function redirectWithError(path: string, errorCode: string): never {
 function safePath(value: string | undefined, fallback: string) {
   if (!value) return fallback;
   return value.startsWith("/") ? value : fallback;
+}
+
+function serializeCustomerStampRequest(
+  request: CustomerStampRequestSnapshot,
+) {
+  return {
+    id: request.id,
+    createdAt: request.createdAt.toISOString(),
+  };
 }
 
 function isUniqueConstraintError(error: unknown, field?: string) {
@@ -212,6 +231,36 @@ type StaffCreateCustomerActionResult =
   | {
       ok: false;
       error: string;
+    };
+
+type CustomerStampRequestActionResult =
+  | {
+      ok: true;
+      status: "CREATED" | "ALREADY_PENDING";
+      request: {
+        id: string;
+        createdAt: string;
+      };
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
+type StaffStampRequestActionResult =
+  | {
+      ok: true;
+      requestId: string;
+      customerId: string;
+      currentStampCount: number;
+      lifetimeStampCount: number;
+      availableFreeDrinks: number;
+      message: string;
+    }
+  | {
+      ok: false;
+      error: string;
+      customerId?: string;
     };
 
 type CreatedCustomerAccount = {
@@ -368,6 +417,39 @@ export async function createStaffCustomerAction(input: {
 
     throw error;
   }
+}
+
+export async function requestCustomerStampAction(): Promise<CustomerStampRequestActionResult> {
+  const session = await requireCustomerSession();
+  const customer = session.user.customerProfile;
+
+  if (!customer) {
+    return { ok: false, error: "NOT_AUTHENTICATED" };
+  }
+
+  const result = await createStampRequestForCustomer(customer.id);
+
+  if (result.status === "NOT_FOUND") {
+    return { ok: false, error: "NOT_FOUND" };
+  }
+
+  if (result.status === "CREATED") {
+    await sendStaffStampRequestNotification({
+      requestId: result.request.id,
+      customerId: result.request.customerId,
+      customerName: result.request.customerName,
+      memberId: result.request.memberId,
+    }).catch(() => undefined);
+  }
+
+  revalidatePath("/rewards");
+  revalidatePath("/staff/customers");
+
+  return {
+    ok: true,
+    status: result.status,
+    request: serializeCustomerStampRequest(result.request),
+  };
 }
 
 export async function customerLoginAction(formData: FormData) {
@@ -1044,6 +1126,62 @@ export async function adjustLoyaltyAction(formData: FormData) {
   revalidatePath("/app");
   revalidatePath("/rewards");
   redirect(safePath(payload.data.returnTo, `/staff/customers/${customer.id}`));
+}
+
+export async function approveStampRequestAction(input: {
+  requestId: string;
+}): Promise<StaffStampRequestActionResult> {
+  const session = await requireStaffSession();
+  const payload = stampRequestSchema.safeParse(input);
+
+  if (!payload.success) {
+    return { ok: false, error: "BAD_FORM" };
+  }
+
+  const result = await approveStampRequest(
+    payload.data.requestId,
+    session.user.staffUser!.id,
+  );
+
+  if (result.status === "NOT_FOUND") {
+    return { ok: false, error: "NOT_FOUND" };
+  }
+
+  if (result.status === "ALREADY_HANDLED") {
+    return {
+      ok: false,
+      error: "ALREADY_HANDLED",
+      customerId: result.customerId,
+    };
+  }
+
+  if (result.status !== "APPROVED") {
+    return { ok: false, error: "UNKNOWN" };
+  }
+
+  if (result.rewardsCreated > 0) {
+    await sendCustomerRewardEarnedNotification({
+      userId: result.customerUserId,
+      sourceKey: `stamp-request:${result.requestId}`,
+      rewardsCreated: result.rewardsCreated,
+    }).catch(() => undefined);
+  }
+
+  revalidatePath("/staff/customers");
+  revalidatePath(`/staff/customers/${result.customerId}`);
+  revalidatePath("/rewards");
+  revalidatePath("/app");
+  revalidatePath("/account");
+
+  return {
+    ok: true,
+    requestId: result.requestId,
+    customerId: result.customerId,
+    currentStampCount: result.currentStampCount,
+    lifetimeStampCount: result.lifetimeStampCount,
+    availableFreeDrinks: result.availableFreeDrinks,
+    message: "Tampon validé.",
+  };
 }
 
 export async function quickAddCustomerStampsAction(input: {

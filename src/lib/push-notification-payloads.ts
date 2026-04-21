@@ -1,5 +1,12 @@
 import type { NotificationKind } from "@prisma/client";
 
+import { formatMemberId } from "./format";
+
+type PushNotificationAction = {
+  action: string;
+  title: string;
+};
+
 type PushNotificationPayload = {
   kind: NotificationKind;
   eventKey: string;
@@ -7,6 +14,8 @@ type PushNotificationPayload = {
   body: string;
   url: string;
   tag: string;
+  actions?: PushNotificationAction[];
+  data?: Record<string, string>;
 };
 
 function trimNotificationBody(value: string, maxLength = 120) {
@@ -30,6 +39,37 @@ export function buildStaffNewOrderNotification(input: {
     body: trimNotificationBody(`${input.itemsSummary} pour ${input.customerName}`),
     url: `/staff/orders/${input.orderId}`,
     tag: `staff-order-${input.orderId}`,
+  };
+}
+
+export function buildStaffStampRequestNotification(input: {
+  requestId: string;
+  customerId: string;
+  customerName: string;
+  memberId: number;
+}): PushNotificationPayload {
+  const url = `/staff/customers?stampRequest=${input.requestId}`;
+
+  return {
+    kind: "STAFF_STAMP_REQUEST",
+    eventKey: `staff:stamp-request:${input.requestId}`,
+    title: "Demande de tampon",
+    body: trimNotificationBody(
+      `${input.customerName} · ${formatMemberId(input.memberId)}`,
+    ),
+    url,
+    tag: `staff-stamp-request-${input.requestId}`,
+    actions: [
+      {
+        action: "approve-stamp-request",
+        title: "Approuver",
+      },
+    ],
+    data: {
+      stampRequestId: input.requestId,
+      customerId: input.customerId,
+      approvalUrl: `/api/staff/stamp-requests/${input.requestId}/approve`,
+    },
   };
 }
 

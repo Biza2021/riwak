@@ -159,6 +159,14 @@ export const fr = {
   rewards: {
     title: "Récompenses",
     subtitle: "5 achats qualifiants = 1 boisson offerte.",
+    stampRequestTitle: "Demander un tampon",
+    stampRequestBody:
+      "Si vous venez de payer au comptoir, envoyez une demande rapide au barista pour valider votre passage.",
+    stampRequestAction: "Demander un tampon",
+    stampRequestSentLabel: "Demande envoyée",
+    stampRequestSent: "Votre demande a été envoyée au comptoir.",
+    stampRequestAlreadyPending: "Une demande est déjà en attente.",
+    stampRequestPending: (date: string) => `Demande envoyée le ${date}.`,
     unlockedTitle: "Boisson offerte débloquée",
     unlockedBody: "Votre crédit est stocké dans le compte et peut être utilisé plus tard.",
     available: "Disponible",
@@ -212,6 +220,12 @@ export const fr = {
     incomingLabel: "Nouvelle",
     activeUnpaidLabel: "Commande impayée active",
     customerSearchTitle: "Rechercher un client",
+    stampRequestTitle: "Demandes de tampon",
+    stampRequestBody:
+      "Validez rapidement les passages envoyés depuis l’app client. Une seule demande peut rester en attente par client.",
+    stampRequestPending: "En attente",
+    stampRequestApprove: "Approuver",
+    stampRequestHandled: "Cette demande a déjà été traitée.",
     customerSearchEmpty: "Aucun client ne correspond à cette recherche.",
     logoutTitle: "Session équipe",
     logoutBody:
