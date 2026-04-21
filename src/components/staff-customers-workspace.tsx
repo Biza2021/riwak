@@ -2,11 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import {
-  type KeyboardEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent,
+  type RefObject,
   type SyntheticEvent,
   useDeferredValue,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from "react";
@@ -15,6 +18,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { fr } from "@/content/fr";
 import {
   approveStampRequestAction,
+  createStaffCustomerAccessLinkAction,
   createStaffCustomerAction,
   quickAddCustomerStampsAction,
   quickRedeemCustomerRewardAction,
@@ -85,21 +89,29 @@ type CreatedCustomerState = {
   memberId: number;
   fullName: string;
   phoneNumber: string;
-  recoveryCode: string;
 };
 
-function buildCustomerSmsMessage(createdCustomer: CreatedCustomerState) {
-  return fr.staff.customerSmsMessage(
-    createdCustomer.fullName,
-    `${window.location.origin}/login`,
-    createdCustomer.recoveryCode,
-    formatMemberId(createdCustomer.memberId),
-  );
+function buildCustomerSmsMessage(
+  createdCustomer: CreatedCustomerState,
+  accessUrl: string,
+) {
+  return fr.staff.customerSmsMessage(createdCustomer.fullName, accessUrl);
 }
 
-function openCustomerSmsComposer(createdCustomer: CreatedCustomerState) {
-  const message = encodeURIComponent(buildCustomerSmsMessage(createdCustomer));
+function openCustomerSmsComposer(
+  createdCustomer: CreatedCustomerState,
+  accessUrl: string,
+) {
+  const message = encodeURIComponent(
+    buildCustomerSmsMessage(createdCustomer, accessUrl),
+  );
   window.location.href = `sms:${createdCustomer.phoneNumber}?body=${message}`;
+}
+
+function focusField(fieldRef: RefObject<HTMLInputElement | null>) {
+  window.setTimeout(() => {
+    fieldRef.current?.focus();
+  }, 10);
 }
 
 function CustomerActionCard({
@@ -256,7 +268,7 @@ function CustomerActionCard({
     router.push(detailHref);
   }
 
-  function handleCardKeyDown(event: KeyboardEvent<HTMLElement>) {
+  function handleCardKeyDown(event: ReactKeyboardEvent<HTMLElement>) {
     if (event.key !== "Enter" && event.key !== " ") {
       return;
     }
@@ -501,7 +513,13 @@ export function StaffCustomersWorkspace({
     message: string;
   } | null>(null);
   const [isCreatePending, startCreateTransition] = useTransition();
+  const [isSmsPending, startSmsTransition] = useTransition();
+  const [smsFeedback, setSmsFeedback] = useState<{
+    tone: "green" | "red";
+    message: string;
+  } | null>(null);
   const deferredQuery = useDeferredValue(query);
+  const fullNameFieldRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setCustomers(initialCustomers);
@@ -510,6 +528,30 @@ export function StaffCustomersWorkspace({
   useEffect(() => {
     setPendingStampRequests(initialPendingStampRequests);
   }, [initialPendingStampRequests]);
+
+  useEffect(() => {
+    if (!showCreateForm) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    focusField(fullNameFieldRef);
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape" && !isCreatePending) {
+        setShowCreateForm(false);
+        setCreateFeedback(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isCreatePending, showCreateForm]);
 
   const filteredCustomers = useMemo(
     () => filterStaffCustomers(customers, deferredQuery),
@@ -605,17 +647,81 @@ export function StaffCustomersWorkspace({
           memberId: result.customer.memberId,
           fullName: result.customer.fullName,
           phoneNumber: result.customer.phoneNumber,
-          recoveryCode: result.recoveryCode,
         });
-        setCreateFeedback({
-          tone: "green",
-          message: fr.staff.customerCreateSuccess(
-            result.customer.fullName,
-            formatMemberId(result.customer.memberId),
-          ),
-        });
+        setCreateFeedback(null);
+        setSmsFeedback(null);
       } catch {
         setCreateFeedback({
+          tone: "red",
+          message: fr.errors.UNKNOWN,
+        });
+      }
+    });
+  }
+
+  function openCreateCustomerModal() {
+    setShowCreateForm(true);
+    setCreateFeedback(null);
+    setCreatedCustomer(null);
+    setSmsFeedback(null);
+  }
+
+  function closeCreateCustomerModal() {
+    if (isCreatePending) {
+      return;
+    }
+
+    setShowCreateForm(false);
+    setCreateFeedback(null);
+  }
+
+  function handleCreateModalBackdropClick(
+    event: MouseEvent<HTMLDivElement>,
+  ) {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+
+    closeCreateCustomerModal();
+  }
+
+  const createDisabled =
+    isCreatePending ||
+    !createValues.fullName.trim() ||
+    !createValues.phoneNumber.trim();
+
+  function prepareCustomerSms() {
+    if (!createdCustomer || isSmsPending) {
+      return;
+    }
+
+    setSmsFeedback(null);
+
+    startSmsTransition(async () => {
+      try {
+        const result = await createStaffCustomerAccessLinkAction({
+          customerId: createdCustomer.id,
+        });
+
+        if (!result.ok) {
+          setSmsFeedback({
+            tone: "red",
+            message:
+              result.error === "NOT_FOUND"
+                ? fr.errors.NOT_FOUND
+                : result.error === "BAD_FORM"
+                  ? fr.errors.BAD_FORM
+                  : fr.errors.UNKNOWN,
+          });
+          return;
+        }
+
+        openCustomerSmsComposer(
+          createdCustomer,
+          `${window.location.origin}${result.accessPath}`,
+        );
+      } catch {
+        setSmsFeedback({
           tone: "red",
           message: fr.errors.UNKNOWN,
         });
@@ -641,10 +747,7 @@ export function StaffCustomersWorkspace({
             <PrimaryButton
               type="button"
               className="px-4"
-              onClick={() => {
-                setShowCreateForm((current) => !current);
-                setCreateFeedback(null);
-              }}
+              onClick={openCreateCustomerModal}
             >
               {fr.actions.addCustomer}
             </PrimaryButton>
@@ -658,22 +761,40 @@ export function StaffCustomersWorkspace({
           placeholder={fr.forms.customerSearchPlaceholder}
           aria-label={fr.staff.customerSearchTitle}
         />
+      </Card>
 
-        {showCreateForm ? (
-          <div className="space-y-4 rounded-2xl bg-[#f8f1e7] p-4">
+      {showCreateForm ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end bg-[#2d1b12]/35 px-4 pb-4 pt-8 sm:items-center sm:justify-center sm:px-6"
+          onClick={handleCreateModalBackdropClick}
+          role="presentation"
+        >
+          <Card
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="staff-create-customer-title"
+            className="w-full max-w-lg space-y-4 p-5 sm:p-6"
+          >
             <div className="space-y-1.5">
-              <p className="text-sm font-semibold text-[#8c6239]">
-                {fr.staff.customerCreateTitle}
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8c6239]">
+                {fr.actions.addCustomer}
               </p>
+              <h2
+                id="staff-create-customer-title"
+                className="text-xl font-semibold text-[#2d1b12]"
+              >
+                {fr.staff.customerCreateTitle}
+              </h2>
               <p className="text-sm leading-6 text-[#6d5644]">
                 {fr.staff.customerCreateBody}
               </p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-4">
               <div>
                 <FieldLabel>{fr.common.fullName}</FieldLabel>
                 <TextField
+                  ref={fullNameFieldRef}
                   value={createValues.fullName}
                   onChange={(event) =>
                     setCreateValues((current) => ({
@@ -689,6 +810,7 @@ export function StaffCustomersWorkspace({
                 <FieldLabel>{fr.common.phoneNumber}</FieldLabel>
                 <TextField
                   type="tel"
+                  inputMode="tel"
                   value={createValues.phoneNumber}
                   onChange={(event) =>
                     setCreateValues((current) => ({
@@ -702,33 +824,34 @@ export function StaffCustomersWorkspace({
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <PrimaryButton
-                type="button"
-                disabled={isCreatePending}
-                onClick={handleCreateCustomer}
-              >
-                <InlineActionLabel
-                  pending={isCreatePending}
-                  label={fr.actions.addCustomer}
-                />
-              </PrimaryButton>
+            {createFeedback ? (
+              <Notice tone={createFeedback.tone}>{createFeedback.message}</Notice>
+            ) : null}
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
               <SecondaryButton
                 type="button"
                 disabled={isCreatePending}
-                onClick={() => {
-                  setShowCreateForm(false);
-                  setCreateFeedback(null);
-                }}
+                onClick={closeCreateCustomerModal}
+                className="w-full sm:w-auto sm:min-w-32"
               >
                 {fr.actions.cancel}
               </SecondaryButton>
+              <PrimaryButton
+                type="button"
+                disabled={createDisabled}
+                onClick={handleCreateCustomer}
+                className="w-full sm:w-auto sm:min-w-32"
+              >
+                <InlineActionLabel
+                  pending={isCreatePending}
+                  label={fr.actions.create}
+                />
+              </PrimaryButton>
             </div>
-          </div>
-        ) : null}
-
-        {createFeedback ? <Notice tone={createFeedback.tone}>{createFeedback.message}</Notice> : null}
-      </Card>
+          </Card>
+        </div>
+      ) : null}
 
       {pendingStampRequests.length ? (
         <Card className="space-y-4 p-4">
@@ -779,12 +902,17 @@ export function StaffCustomersWorkspace({
           <div className="flex flex-wrap gap-2">
             <PrimaryButton
               type="button"
-              onClick={() => openCustomerSmsComposer(createdCustomer)}
+              disabled={isSmsPending}
+              onClick={prepareCustomerSms}
             >
-              {fr.actions.prepareSms}
+              <InlineActionLabel
+                pending={isSmsPending}
+                label={fr.actions.prepareSms}
+              />
             </PrimaryButton>
             <SecondaryButton
               type="button"
+              disabled={isSmsPending}
               onClick={() => {
                 setQuery(String(createdCustomer.memberId));
                 router.push(`/staff/customers/${createdCustomer.id}`);
@@ -792,10 +920,19 @@ export function StaffCustomersWorkspace({
             >
               {fr.staff.customerCreateDetailAction}
             </SecondaryButton>
-            <SecondaryButton type="button" onClick={() => setCreatedCustomer(null)}>
+            <SecondaryButton
+              type="button"
+              disabled={isSmsPending}
+              onClick={() => {
+                setCreatedCustomer(null);
+                setSmsFeedback(null);
+              }}
+            >
               {fr.actions.dismiss}
             </SecondaryButton>
           </div>
+
+          {smsFeedback ? <Notice tone={smsFeedback.tone}>{smsFeedback.message}</Notice> : null}
         </Card>
       ) : null}
 

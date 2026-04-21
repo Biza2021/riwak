@@ -297,7 +297,7 @@ export async function approveStampRequest(
               orderId: null,
               type: "ADJUSTED",
               stampDelta: 1,
-              notes: "Tampon validé depuis la demande client",
+              notes: "Point fidélité validé depuis votre demande",
             },
             select: {
               id: true,

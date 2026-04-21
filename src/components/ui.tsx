@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
+import { forwardRef, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -142,20 +142,22 @@ export function buttonClassName(variant: ButtonVariant, className?: string) {
   return cn(styles[variant], className);
 }
 
-export function TextField({
-  className,
-  ...props
-}: InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      {...props}
-      className={cn(
-        "min-h-12 w-full rounded-2xl border border-[#dcc6ad] bg-white px-4 text-sm text-[#2d1b12] outline-none placeholder:text-[#a28770] focus:border-[#8c6239] focus:ring-2 focus:ring-[#d8b36f]/30",
-        className,
-      )}
-    />
-  );
-}
+export const TextField = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
+  function TextField({ className, ...props }, ref) {
+    return (
+      <input
+        {...props}
+        ref={ref}
+        className={cn(
+          "min-h-12 w-full rounded-2xl border border-[#dcc6ad] bg-white px-4 text-sm text-[#2d1b12] outline-none placeholder:text-[#a28770] focus:border-[#8c6239] focus:ring-2 focus:ring-[#d8b36f]/30",
+          className,
+        )}
+      />
+    );
+  },
+);
+
+TextField.displayName = "TextField";
 
 export function TextAreaField({
   className,

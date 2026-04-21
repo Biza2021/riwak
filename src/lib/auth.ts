@@ -1,4 +1,4 @@
-import { randomInt } from "node:crypto";
+import { randomBytes, randomInt } from "node:crypto";
 
 import bcrypt from "bcryptjs";
 
@@ -31,4 +31,8 @@ export function generateLoyaltyPin(existingPins: Iterable<string> = []) {
 
 export function normalizeStaffEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+export function generateAccessLinkToken() {
+  return randomBytes(24).toString("base64url");
 }

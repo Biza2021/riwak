@@ -9,8 +9,7 @@ import { LOYALTY_STAMP_THRESHOLD } from "@/lib/domain";
 import { getCustomerRewardsData } from "@/lib/queries";
 import { requireCustomerSession } from "@/lib/session";
 import { redeemRewardAction } from "@/lib/actions";
-import { formatDateTime, formatMemberId } from "@/lib/format";
-import { customerTypeLabel, customerTypeTone } from "@/lib/presentation";
+import { formatDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -59,27 +58,6 @@ export default async function RewardsPage() {
               tone="green"
             />
           </div>
-
-          <Card className="space-y-4 p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold text-[#8c6239]">{customer.fullName}</p>
-                <p className="mt-1 text-sm text-[#6d5644]">{customer.phoneNumber}</p>
-              </div>
-              <Badge tone={customerTypeTone(customer.customerType)}>
-                {customerTypeLabel(customer.customerType)}
-              </Badge>
-            </div>
-            <div className="rounded-2xl bg-[#fff6e8] p-4 text-sm leading-6 text-[#6d5644]">
-              <p>{fr.rewards.subtitle}</p>
-              <p className="mt-1">
-                {fr.common.memberId}:{" "}
-                <span className="font-semibold text-[#2d1b12]">
-                  {formatMemberId(customer.memberId)}
-                </span>
-              </p>
-            </div>
-          </Card>
 
           <CustomerStampRequestCard initialPendingRequest={pendingStampRequest} />
 

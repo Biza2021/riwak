@@ -104,6 +104,7 @@ model CustomerProfile {
   loyaltyEvents LoyaltyStampEvent[]
   rewards       Reward[]
   stampRequests StampRequest[]
+  accessLinks   CustomerAccessLink[]
   trustEvents   CustomerTrustEvent[]
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
@@ -118,6 +119,7 @@ model StaffUser {
   passwordHash  String
   active        Boolean            @default(true)
   approvedStampRequests StampRequest[]
+  createdAccessLinks CustomerAccessLink[]
   trustEvents   CustomerTrustEvent[]
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
@@ -271,6 +273,22 @@ model StampRequest {
   @@index([customerId, status, createdAt])
   @@index([status, createdAt])
   @@index([resolvedByStaffUserId])
+}
+
+model CustomerAccessLink {
+  id                  String          @id @default(cuid())
+  customerId          String
+  customer            CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tokenHash           String          @unique
+  expiresAt           DateTime
+  usedAt              DateTime?
+  createdByStaffUserId String?
+  createdByStaffUser  StaffUser?      @relation(fields: [createdByStaffUserId], references: [id], onDelete: SetNull)
+  createdAt           DateTime        @default(now())
+
+  @@index([customerId, expiresAt])
+  @@index([expiresAt])
+  @@index([createdByStaffUserId])
 }
 
 model Reward {

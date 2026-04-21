@@ -5,7 +5,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { generateLoyaltyPin, normalizeCustomerPhone, normalizeStaffEmail, verifySecret } from "./auth";
+import {
+  generateAccessLinkToken,
+  generateLoyaltyPin,
+  normalizeCustomerPhone,
+  normalizeStaffEmail,
+  verifySecret,
+} from "./auth";
 import { prisma } from "./db";
 import {
   applyLoyaltyPurchase,
@@ -19,7 +25,13 @@ import {
   redeemRewardState,
   slugifyMenuName,
 } from "./domain";
-import { createSession, clearSession, requireCustomerSession, requireStaffSession } from "./session";
+import {
+  clearSession,
+  createSession,
+  hashToken,
+  requireCustomerSession,
+  requireStaffSession,
+} from "./session";
 import { ensureStoreSettings, expireOverdueOrders } from "./queries";
 import {
   sendCustomerOrderReadyNotification,
@@ -55,6 +67,10 @@ const customerLoginSchema = z.object({
 const staffCreateCustomerSchema = z.object({
   fullName: z.string().trim().min(2).max(80),
   phoneNumber: z.string().trim().min(6).max(24),
+});
+
+const staffCreateAccessLinkSchema = z.object({
+  customerId: z.string().min(1),
 });
 
 const staffLoginSchema = z.object({
@@ -120,6 +136,11 @@ const quickRewardSchema = z.object({
 
 const stampRequestSchema = z.object({
   requestId: z.string().min(1),
+});
+
+const customerAccessLinkSchema = z.object({
+  token: z.string().trim().min(10),
+  phoneNumber: z.string().trim().min(6).max(24),
 });
 
 const rewardRedeemSchema = z.object({
@@ -226,7 +247,16 @@ type StaffCreateCustomerActionResult =
   | {
       ok: true;
       customer: StaffCustomerCardSnapshot;
-      recoveryCode: string;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
+type StaffCreateCustomerAccessLinkActionResult =
+  | {
+      ok: true;
+      accessPath: string;
     }
   | {
       ok: false;
@@ -274,6 +304,8 @@ type CreatedCustomerAccount = {
     customerType: StaffCustomerCardSnapshot["customerType"];
   };
 };
+
+const CUSTOMER_ACCESS_LINK_TTL_HOURS = 24;
 
 async function createCustomerAccount(params: {
   fullName: string;
@@ -345,6 +377,50 @@ async function createCustomerAccount(params: {
   throw new ActionConflictError("UNKNOWN");
 }
 
+async function createCustomerAccessLink(params: {
+  customerId: string;
+  createdByStaffUserId?: string;
+}) {
+  const token = generateAccessLinkToken();
+  const tokenHash = hashToken(token);
+  const expiresAt = new Date(
+    Date.now() + CUSTOMER_ACCESS_LINK_TTL_HOURS * 60 * 60 * 1000,
+  );
+
+  await prisma.$transaction(async (tx) => {
+    const customer = await tx.customerProfile.findUnique({
+      where: { id: params.customerId },
+      select: { id: true },
+    });
+
+    if (!customer) {
+      throw new ActionConflictError("NOT_FOUND");
+    }
+
+    await tx.customerAccessLink.deleteMany({
+      where: {
+        customerId: params.customerId,
+        usedAt: null,
+      },
+    });
+
+    await tx.customerAccessLink.create({
+      data: {
+        customerId: params.customerId,
+        tokenHash,
+        expiresAt,
+        createdByStaffUserId: params.createdByStaffUserId ?? null,
+      },
+    });
+  });
+
+  return {
+    token,
+    expiresAt,
+    accessPath: `/access/${token}`,
+  };
+}
+
 export async function registerCustomerAction(formData: FormData) {
   const payload = customerRegisterSchema.safeParse({
     fullName: formText(formData, "fullName"),
@@ -408,7 +484,35 @@ export async function createStaffCustomerAction(input: {
         availableFreeDrinks: 0,
         lastOrderAt: null,
       },
-      recoveryCode: created.customer.loyaltyPin,
+    };
+  } catch (error) {
+    if (error instanceof ActionConflictError) {
+      return { ok: false, error: error.code };
+    }
+
+    throw error;
+  }
+}
+
+export async function createStaffCustomerAccessLinkAction(input: {
+  customerId: string;
+}): Promise<StaffCreateCustomerAccessLinkActionResult> {
+  const session = await requireStaffSession();
+  const payload = staffCreateAccessLinkSchema.safeParse(input);
+
+  if (!payload.success) {
+    return { ok: false, error: "BAD_FORM" };
+  }
+
+  try {
+    const accessLink = await createCustomerAccessLink({
+      customerId: payload.data.customerId,
+      createdByStaffUserId: session.user.staffUser!.id,
+    });
+
+    return {
+      ok: true,
+      accessPath: accessLink.accessPath,
     };
   } catch (error) {
     if (error instanceof ActionConflictError) {
@@ -481,6 +585,72 @@ export async function customerLoginAction(formData: FormData) {
   await createSession(customer.userId);
   revalidatePath("/app");
   redirect(safePath(payload.data.redirectTo, "/app"));
+}
+
+export async function redeemCustomerAccessLinkAction(formData: FormData) {
+  const payload = customerAccessLinkSchema.safeParse({
+    token: formText(formData, "token"),
+    phoneNumber: formText(formData, "phoneNumber"),
+  });
+
+  const fallbackToken = formText(formData, "token");
+  const fallbackPath = fallbackToken ? `/access/${fallbackToken}` : "/login";
+
+  if (!payload.success) {
+    redirectWithError(fallbackPath, "BAD_FORM");
+  }
+
+  const normalizedPhoneNumber = normalizeCustomerPhone(payload.data.phoneNumber);
+  const now = new Date();
+  const tokenHash = hashToken(payload.data.token);
+
+  const accessLink = await prisma.customerAccessLink.findFirst({
+    where: {
+      tokenHash,
+      usedAt: null,
+      expiresAt: {
+        gt: now,
+      },
+    },
+    select: {
+      id: true,
+      customer: {
+        select: {
+          userId: true,
+          phoneNumber: true,
+        },
+      },
+    },
+  });
+
+  if (!accessLink) {
+    redirectWithError(fallbackPath, "ACCESS_LINK_INVALID");
+  }
+
+  if (accessLink.customer.phoneNumber !== normalizedPhoneNumber) {
+    redirectWithError(fallbackPath, "BAD_PHONE");
+  }
+
+  const claimed = await prisma.customerAccessLink.updateMany({
+    where: {
+      id: accessLink.id,
+      usedAt: null,
+      expiresAt: {
+        gt: now,
+      },
+    },
+    data: {
+      usedAt: new Date(),
+    },
+  });
+
+  if (claimed.count !== 1) {
+    redirectWithError(fallbackPath, "ACCESS_LINK_INVALID");
+  }
+
+  await createSession(accessLink.customer.userId);
+  revalidatePath("/app");
+  redirect("/app?setup=1");
 }
 
 export async function staffLoginAction(formData: FormData) {
