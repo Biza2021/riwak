@@ -2,9 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { CustomerBottomNav } from "@/components/navigation";
-import { Card, Screen, SectionHeader, Badge, PrimaryButton, SecondaryButton } from "@/components/ui";
+import { Badge, Card, Notice, Screen, SectionHeader, SecondaryButton } from "@/components/ui";
 import { fr } from "@/content/fr";
-import { redeemRewardAction } from "@/lib/actions";
 import { getRewardById } from "@/lib/queries";
 import { requireCustomerSession } from "@/lib/session";
 import { formatDateTime } from "@/lib/format";
@@ -23,8 +22,6 @@ export default async function RewardPage({
   if (!reward || reward.customerId !== session.user.customerProfile?.id) {
     redirect("/rewards");
   }
-
-  const currentPath = `/rewards/${reward.id}`;
 
   return (
     <>
@@ -49,6 +46,8 @@ export default async function RewardPage({
               <Badge tone="green">{fr.rewards.available}</Badge>
             </div>
 
+            <Notice tone="blue">{fr.rewards.counterOnlyBody}</Notice>
+
             {reward.sourceOrder ? (
               <div className="rounded-2xl bg-[#fff6e8] p-4 text-sm leading-6 text-[#6d5644]">
                 <p className="font-semibold text-[#2d1b12]">Commande source</p>
@@ -59,14 +58,6 @@ export default async function RewardPage({
                 </p>
               </div>
             ) : null}
-
-            <form action={redeemRewardAction} className="space-y-3">
-              <input type="hidden" name="rewardId" value={reward.id} />
-              <input type="hidden" name="returnTo" value={currentPath} />
-              <PrimaryButton type="submit" className="w-full">
-                {fr.actions.redeem}
-              </PrimaryButton>
-            </form>
 
             <Link href="/rewards" className="block">
               <SecondaryButton type="button" className="w-full">

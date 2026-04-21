@@ -5,7 +5,6 @@ import { BrandLogo } from "@/components/brand-logo";
 import { SubmitButton } from "@/components/submit-button";
 import {
   Card,
-  FieldHint,
   FieldLabel,
   Notice,
   Screen,
@@ -62,18 +61,6 @@ export default async function LoginPage({
                 placeholder={fr.forms.phonePlaceholder}
                 required
               />
-            </div>
-            <div>
-              <FieldLabel>{fr.auth.recoveryCodeLabel}</FieldLabel>
-              <TextField
-                name="loyaltyPin"
-                inputMode="numeric"
-                pattern="[0-9]{6}"
-                autoComplete="one-time-code"
-                placeholder={fr.forms.pinPlaceholder}
-                required
-              />
-              <FieldHint>{fr.auth.pinHelp}</FieldHint>
             </div>
             <SubmitButton className="w-full">{fr.actions.login}</SubmitButton>
           </form>

@@ -203,11 +203,6 @@ export async function getCustomerAccountData(customerId: string) {
       memberId: true,
       fullName: true,
       phoneNumber: true,
-      loyaltyPin: true,
-      customerType: true,
-      trustReason: true,
-      limitedUntil: true,
-      trustedUntil: true,
       createdAt: true,
     },
   });

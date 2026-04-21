@@ -60,7 +60,6 @@ const customerRegisterSchema = z.object({
 
 const customerLoginSchema = z.object({
   phoneNumber: z.string().trim().min(6).max(24),
-  loyaltyPin: z.string().trim().length(6),
   redirectTo: z.string().optional(),
 });
 
@@ -300,7 +299,6 @@ type CreatedCustomerAccount = {
     memberId: number;
     fullName: string;
     phoneNumber: string;
-    loyaltyPin: string;
     customerType: StaffCustomerCardSnapshot["customerType"];
   };
 };
@@ -346,7 +344,6 @@ async function createCustomerAccount(params: {
               memberId: true,
               fullName: true,
               phoneNumber: true,
-              loyaltyPin: true,
               customerType: true,
             },
           },
@@ -559,7 +556,6 @@ export async function requestCustomerStampAction(): Promise<CustomerStampRequest
 export async function customerLoginAction(formData: FormData) {
   const payload = customerLoginSchema.safeParse({
     phoneNumber: formText(formData, "phoneNumber"),
-    loyaltyPin: formText(formData, "loyaltyPin"),
     redirectTo: formText(formData, "redirectTo") || undefined,
   });
 
@@ -568,18 +564,21 @@ export async function customerLoginAction(formData: FormData) {
   }
 
   const phoneNumber = normalizeCustomerPhone(payload.data.phoneNumber);
+  if (!phoneNumber) {
+    redirectWithError("/login", "BAD_PHONE");
+  }
+
   const customer = await prisma.customerProfile.findFirst({
     where: {
       phoneNumber,
-      loyaltyPin: payload.data.loyaltyPin,
     },
-    include: {
-      user: true,
+    select: {
+      userId: true,
     },
   });
 
   if (!customer) {
-    redirectWithError("/login", "INVALID_PIN");
+    redirectWithError("/login", "CUSTOMER_NOT_FOUND");
   }
 
   await createSession(customer.userId);
@@ -1561,12 +1560,6 @@ export async function quickRedeemCustomerRewardAction(input: {
 }
 
 export async function redeemRewardAction(formData: FormData) {
-  const session = await requireCustomerSession();
-  const customer = session.user.customerProfile;
-  if (!customer) {
-    redirectWithError("/rewards", "NOT_AUTHENTICATED");
-  }
-
   const payload = rewardRedeemSchema.safeParse({
     rewardId: formText(formData, "rewardId") || undefined,
     returnTo: formText(formData, "returnTo") || undefined,
@@ -1576,52 +1569,11 @@ export async function redeemRewardAction(formData: FormData) {
     redirectWithError("/rewards", "BAD_FORM");
   }
 
-  const reward = await prisma.reward.findFirst({
-    where: {
-      customerId: customer.id,
-      status: "AVAILABLE",
-      ...(payload.data.rewardId ? { id: payload.data.rewardId } : {}),
-    },
-    orderBy: { createdAt: "asc" },
-  });
-
-  if (!reward) {
-    redirectWithError(safePath(payload.data.returnTo, "/rewards"), "NO_REWARD");
-  }
-
-  await prisma.$transaction(async (tx) => {
-    await tx.reward.update({
-      where: { id: reward.id },
-      data: {
-        status: "REDEEMED",
-        redeemedAt: new Date(),
-      },
-    });
-
-    await tx.loyaltyAccount.update({
-      where: { customerId: customer.id },
-      data: {
-        availableFreeDrinks: {
-          decrement: 1,
-        },
-      },
-    });
-
-    await tx.loyaltyStampEvent.create({
-      data: {
-        customerId: customer.id,
-        orderId: reward.sourceOrderId,
-        type: "REDEEMED",
-        stampDelta: 0,
-        notes: "Boisson offerte utilisée",
-      },
-    });
-  });
-
-  revalidatePath("/rewards");
-  revalidatePath(`/rewards/${reward.id}`);
-  revalidatePath("/app");
-  redirect(safePath(payload.data.returnTo, `/rewards/${reward.id}`));
+  await requireCustomerSession();
+  redirectWithError(
+    safePath(payload.data.returnTo, "/rewards"),
+    "REWARD_STAFF_ONLY",
+  );
 }
 
 export async function saveSettingsAction(formData: FormData) {

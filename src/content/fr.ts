@@ -13,6 +13,7 @@
     orderNow: "Commander maintenant",
     viewOrder: "Voir la commande",
     viewProfile: "Fiche",
+    open: "Ouvrir",
     addToHome: "Ajouter à l’écran d’accueil",
     dismiss: "Plus tard",
     redeem: "Utiliser",
@@ -82,7 +83,7 @@
     registerCardTitle: "Nouveau client",
     registerCardBody: "Créez votre compte en moins d’une minute.",
     returningCardTitle: "Nouvel appareil ?",
-    returningCardBody: "Retrouvez votre compte avec votre téléphone et votre code de secours.",
+    returningCardBody: "Retrouvez votre compte avec votre numéro de téléphone.",
     returningInlineBody:
       "Sur ce téléphone, vous restez connecté.",
     staffCardTitle: "Espace équipe",
@@ -96,9 +97,9 @@
     registerTitle: "Créer votre compte client",
     registerBody:
       "Entrez votre nom et votre numéro. Sur ce téléphone, vous resterez connecté automatiquement.",
-    loginTitle: "Connexion sur un nouvel appareil",
+    loginTitle: "Connexion client",
     loginBody:
-      "Utilisez votre téléphone et votre code de secours uniquement si vous changez d’appareil.",
+      "Entrez simplement votre numéro de téléphone pour retrouver votre compte.",
     loginCreateHint: "Nouveau client ?",
     registerLoginHint: "Déjà inscrit ?",
     recoveryCodeLabel: "Code de secours",
@@ -171,6 +172,7 @@
     unlockedTitle: "Boisson offerte débloquée",
     unlockedBody: "Votre crédit est stocké dans le compte et peut être utilisé plus tard.",
     available: "Disponible",
+    counterOnlyBody: "Présentez cette boisson offerte au comptoir. Le barista validera son utilisation.",
     historyTitle: "Historique fidélité",
     stampLabel: "Points fid\u00e9lit\u00e9",
     freeDrinkLabel: "Boisson offerte",
@@ -213,13 +215,13 @@
     customerCreateSuccess: (name: string, memberId: string) =>
       `${name} a été ajouté avec l’ID membre ${memberId}.`,
     customerCreateSmsHint:
-      "Optionnel : préparez un SMS avec un lien d'accès unique pour que le client ouvre son compte plus tard.",
+      "Optionnel : préparez un SMS pour aider le client à ouvrir son compte plus tard sur son téléphone.",
     customerCreateDetailAction: "Ouvrir la fiche",
     recoveryCodeTitle: "Code de secours",
     recoveryCodeBody:
       "À transmettre seulement si le client veut ouvrir son compte sur un nouvel appareil.",
     customerSmsMessage: (name: string, accessUrl: string) =>
-      `Bonjour ${name}, votre accès Riwak est prêt. Ouvrez ce lien unique : ${accessUrl}. Continuez ensuite avec votre numéro de téléphone.`,
+      `Bonjour ${name}, bienvenue chez Riwak. Ouvrez ce lien unique : ${accessUrl}. Continuez ensuite avec votre numéro de téléphone.`,
     trustTitle: "Gestion du niveau de confiance",
     loyaltyTitle: "Vue fidélité",
     settingsTitle: "Réglages boutique",
@@ -353,6 +355,7 @@
     BAD_PHONE: "Le numéro de téléphone est invalide.",
     PHONE_EXISTS: "Un compte existe déjà avec ce numéro.",
     INVALID_PIN: "Le téléphone ou le PIN est incorrect.",
+    CUSTOMER_NOT_FOUND: "Aucun compte trouvé pour ce numéro.",
     INVALID_CREDENTIALS: "Identifiants équipe incorrects.",
     NOT_AUTHENTICATED: "Vous devez vous connecter d’abord.",
     MENU_INACTIVE: "Cet article n’est pas disponible.",
@@ -361,6 +364,7 @@
     VOICE_NOTE_TOO_LARGE: "Le message vocal est trop lourd. Gardez-le très court.",
     NOT_FOUND: "Élément introuvable.",
     NO_REWARD: "Aucune récompense disponible pour le moment.",
+    REWARD_STAFF_ONLY: "La boisson offerte est validée uniquement au comptoir par l’équipe.",
     LIMIT_REACHED: "Ce compte est temporairement limité.",
     MISSING_ITEM: "Sélectionnez un article avant de continuer.",
     ORDER_EXPIRED: "Cette commande a expiré.",
@@ -379,5 +383,3 @@
 } as const;
 
 export type FrenchContent = typeof fr;
-
-

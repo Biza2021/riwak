@@ -2,13 +2,11 @@ import Link from "next/link";
 
 import { CustomerStampRequestCard } from "@/components/customer-stamp-request-card";
 import { CustomerBottomNav } from "@/components/navigation";
-import { SubmitButton } from "@/components/submit-button";
 import { Screen, Card, SectionHeader, Badge, MetricCard, EmptyState, SecondaryButton } from "@/components/ui";
 import { fr } from "@/content/fr";
 import { LOYALTY_STAMP_THRESHOLD } from "@/lib/domain";
 import { getCustomerRewardsData } from "@/lib/queries";
 import { requireCustomerSession } from "@/lib/session";
-import { redeemRewardAction } from "@/lib/actions";
 import { formatDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -86,21 +84,13 @@ export default async function RewardsPage() {
                     <div className="mt-3 flex gap-2">
                       <Link href={`/rewards/${reward.id}`} className="flex-1">
                         <SecondaryButton type="button" className="w-full">
-                          Ouvrir
+                          {fr.actions.open}
                         </SecondaryButton>
                       </Link>
-                      <form action={redeemRewardAction} className="flex-1">
-                        <input type="hidden" name="rewardId" value={reward.id} />
-                        <input
-                          type="hidden"
-                          name="returnTo"
-                          value={`/rewards/${reward.id}`}
-                        />
-                        <SubmitButton className="w-full">
-                          {fr.actions.redeem}
-                        </SubmitButton>
-                      </form>
                     </div>
+                    <p className="mt-3 text-sm leading-6 text-[#6d5644]">
+                      {fr.rewards.counterOnlyBody}
+                    </p>
                   </div>
                 ))}
               </div>
